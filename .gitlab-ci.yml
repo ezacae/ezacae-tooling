@@ -1,0 +1,4 @@
+include:
+  - project: 'ezacae/ezacae-ci-utils'
+    ref: main
+    file: 'gitlab-ci-common.yml'

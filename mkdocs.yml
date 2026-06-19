@@ -1,0 +1,46 @@
+site_name: ezacae-claude-tooling
+site_description: Marketplace de plugins Claude Code ezacae (base, jira, doc, dev) — commandes, skills et agents internes versionnés
+site_author: ezacae
+# site_url: https://mon-namespace.gitlab.io/mon-projet/  # à décommenter
+
+theme:
+  name: material
+  language: fr
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Passer en mode sombre
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Passer en mode clair
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search:
+      lang: fr
+
+markdown_extensions:
+  - admonition          # boîtes note/warning/tip
+  - pymdownx.details    # blocs repliables
+  - pymdownx.highlight  # coloration syntaxique
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Accueil: index.md
