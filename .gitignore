@@ -1,0 +1,5 @@
+.DS_Store
+.idea/
+# Secret par projet — jamais ici (ne vit que dans <projet>/.claude/)
+jira.env
+.claude/local.md

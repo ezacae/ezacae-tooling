@@ -1,0 +1,9 @@
+{
+  "name": "ezacae-dev",
+  "description": "Cycle de développement ezacae : orchestrateur Sarah (conception → implémentation → revue), skills chuck / john / morgan / grill-me / handoff, et agents auto-suffisants morgan, john, code-simplifier, technical-design-generator. Mode pipeline JIRA : nécessite ezacae-jira.",
+  "version": "0.1.0",
+  "author": {
+    "name": "ezacae",
+    "email": "simon@ezacae.com"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ezacae-tooling",
+  "description": "Marketplace interne ezacae — plugins Claude Code pour le conseil et le développement low-code / vibe coding.",
+  "owner": {
+    "name": "ezacae",
+    "email": "simon@ezacae.com"
+  },
+  "plugins": [
+    {
+      "name": "ezacae-jira",
+      "description": "Infra commune du pipeline JIRA Mike ⇄ Sarah : skill jira-pipeline, helpers REST, hooks SessionStart + garde de statut.",
+      "category": "productivity",
+      "source": "./plugins/ezacae-jira"
+    },
+    {
+      "name": "ezacae-doc",
+      "description": "Outillage documentaire : orchestrateur Mike (PO/CTO) et commandes vision / personas / processus. Mode pipeline JIRA : nécessite ezacae-jira.",
+      "category": "productivity",
+      "source": "./plugins/ezacae-doc"
+    },
+    {
+      "name": "ezacae-dev",
+      "description": "Cycle de dev : orchestrateur Sarah, skills chuck/john/morgan/grill-me/handoff, agents auto-suffisants morgan/john + code-simplifier/technical-design-generator. Mode pipeline JIRA : nécessite ezacae-jira.",
+      "category": "productivity",
+      "source": "./plugins/ezacae-dev"
+    }
+  ]
+}
