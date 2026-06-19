@@ -8,6 +8,12 @@
   },
   "plugins": [
     {
+      "name": "ezacae-base",
+      "description": "Instructions globales ezacae (conventions documentaires et éditoriales) injectées en contexte à chaque session. Source unique partagée par l'équipe.",
+      "category": "productivity",
+      "source": "./plugins/ezacae-base"
+    },
+    {
       "name": "ezacae-jira",
       "description": "Infra commune du pipeline JIRA Mike ⇄ Sarah : skill jira-pipeline, helpers REST, hooks SessionStart + garde de statut.",
       "category": "productivity",

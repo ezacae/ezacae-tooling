@@ -92,15 +92,25 @@ rm doc-writer.md stack-writer.md morgan.md john.md code-simplifier.md technical-
 
 ---
 
-## 4. Mettre à jour `~/.claude/CLAUDE.md`
+## 4. Conventions globales → plugin `ezacae-base`
 
-Les tableaux « Commandes / Skills disponibles » indiquaient ces éléments comme installés
-dans `~/.claude/`. Après migration :
+Les conventions ezacae (contexte entreprise, stack documentaire, conventions éditoriales,
+interdits) sont désormais distribuées par le plugin **`ezacae-base`**, qui les injecte en
+contexte à chaque session. Plus besoin de les recopier dans le `~/.claude/CLAUDE.md` de
+chacun.
 
-- [ ] Retirer la phrase « Skills avancés installés dans `~/.claude/skills/` ».
-- [ ] Indiquer qu'ils proviennent désormais des plugins `ezacae-doc` / `ezacae-dev` /
-      `ezacae-jira` du marketplace `ezacae-tooling`.
-- [ ] Laisser `/nonreg-web` dans les commandes locales.
+- [ ] Vérifier qu'`ezacae-base` est installé (étape 1) et que le contexte de démarrage
+      affiche « 📐 Conventions globales ezacae ».
+- [ ] Dans le `~/.claude/CLAUDE.md` personnel : **retirer** le bloc de conventions
+      désormais fourni par `ezacae-base` (contexte entreprise, stack/structure
+      documentaire, conventions éditoriales, versioning, « À ne jamais faire ») pour
+      éviter la duplication. Garder ce qui est propre à la machine (ex. `@RTK.md`).
+- [ ] Les tableaux « Commandes / Skills » du CLAUDE.md sont redondants (les plugins se
+      documentent eux-mêmes) — les alléger ou les retirer ; `/nonreg-web` reste la seule
+      commande locale.
+
+> Mise à jour des conventions d'équipe : éditer `plugins/ezacae-base/conventions.md`,
+> bump `version`, `git push`. Chacun récupère via `/plugin` update.
 
 ---
 

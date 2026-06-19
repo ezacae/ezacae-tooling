@@ -6,6 +6,7 @@ Marketplace interne ezacae de plugins Claude Code.
 
 | Plugin | Contenu | Statut |
 |--------|---------|--------|
+| `ezacae-base` | Instructions globales ezacae (`conventions.md`) injectées en contexte à chaque session via un hook SessionStart — source unique d'équipe, remplace le copier-coller dans chaque `~/.claude/CLAUDE.md` | `0.1.0` |
 | `ezacae-jira` | Infra commune du pipeline JIRA : skill `jira-pipeline`, helpers REST (`jira-attach`/`jira-download`), hooks `SessionStart` (pré-checks Git/JIRA + chemin des helpers) et garde de statut `PreToolUse` | `0.1.0` |
 | `ezacae-doc` | Orchestrateur Mike (PO/CTO) + commandes vision / personas / processus, avec les subagents `doc-writer` et `stack-writer` | `0.1.0` |
 | `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `john`, `morgan`, `grill-me`, `handoff` ; agents **auto-suffisants** `morgan`/`john` + `code-simplifier`, `technical-design-generator` ; hook SessionStart injectant la racine du plugin (conventions de stack) | `0.1.0` |
@@ -24,6 +25,7 @@ Marketplace interne ezacae de plugins Claude Code.
 
 ```
 /plugin marketplace add <URL_GITLAB>/ezacae-claude-tooling
+/plugin install ezacae-base@ezacae-tooling
 /plugin install ezacae-jira@ezacae-tooling
 /plugin install ezacae-doc@ezacae-tooling
 /plugin install ezacae-dev@ezacae-tooling
@@ -33,6 +35,7 @@ Pendant le développement, en local :
 
 ```
 /plugin marketplace add ~/DEV/ezacae-claude-tooling
+/plugin install ezacae-base@ezacae-tooling
 /plugin install ezacae-jira@ezacae-tooling
 /plugin install ezacae-doc@ezacae-tooling
 /plugin install ezacae-dev@ezacae-tooling
@@ -75,6 +78,10 @@ En mode pipeline JIRA, `/mike <KEY>` cadre puis passe la main à `/sarah <KEY>` 
 ezacae-claude-tooling/
 ├── .claude-plugin/marketplace.json
 └── plugins/
+    ├── ezacae-base/
+    │   ├── .claude-plugin/plugin.json
+    │   ├── hooks/        (hooks.json + inject-conventions.sh)
+    │   └── conventions.md  (source unique des instructions globales)
     ├── ezacae-jira/
     │   ├── .claude-plugin/plugin.json
     │   ├── hooks/        (hooks.json + session-start.sh + jira-guard.sh)

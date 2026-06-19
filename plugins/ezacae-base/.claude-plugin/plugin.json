@@ -1,0 +1,9 @@
+{
+  "name": "ezacae-base",
+  "description": "Instructions globales ezacae (contexte entreprise, stack documentaire, conventions éditoriales, interdits) injectées en contexte à chaque session via un hook SessionStart. Source unique partagée par toute l'équipe.",
+  "version": "0.1.0",
+  "author": {
+    "name": "ezacae",
+    "email": "simon@ezacae.com"
+  }
+}
