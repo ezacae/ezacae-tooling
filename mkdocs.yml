@@ -1,7 +1,7 @@
 site_name: ezacae-claude-tooling
 site_description: Marketplace de plugins Claude Code ezacae (base, jira, doc, dev) — commandes, skills et agents internes versionnés
 site_author: ezacae
-# site_url: https://mon-namespace.gitlab.io/mon-projet/  # à décommenter
+site_url: https://ezacae-claude-tooling-ff74c4.gitlab.io/  # à décommenter
 
 theme:
   name: material
