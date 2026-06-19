@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ezacae-tooling — marketplace de plugins Claude Code</title>
+<meta name="description" content="Installation des plugins Claude Code ezacae : base, jira, doc, dev." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#0a0a0c; --bg-2:#101014; --panel:#121217;
+    --ink:#ece7db; --dim:#8b8576; --faint:#5b574d;
+    --amber:#ffb627; --amber-2:#ff8a3d; --amber-deep:#b9760b;
+    --ok:#7bd27f; --line:rgba(255,182,39,.16); --line-soft:rgba(255,182,39,.08);
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --disp:"Martian Mono",monospace;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+    background-image:
+      linear-gradient(var(--line-soft) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line-soft) 1px,transparent 1px),
+      radial-gradient(ellipse 80% 50% at 50% -10%,rgba(255,138,61,.10),transparent 60%);
+    background-size:46px 46px,46px 46px,100% 100%;
+  }
+  /* grain */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:200;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  ::selection{background:var(--amber);color:#000}
+  a{color:inherit}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+
+  /* top bar */
+  .bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:22px 0;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:linear-gradient(var(--bg),rgba(10,10,12,.86));
+    backdrop-filter:blur(8px);z-index:100;
+  }
+  .brand{font-family:var(--mono);font-weight:600;letter-spacing:.02em;display:flex;gap:10px;align-items:center}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 12px var(--amber)}
+  .bar .ver{font-family:var(--mono);font-size:.72rem;color:var(--amber);border:1px solid var(--line);
+    padding:3px 9px;border-radius:999px}
+
+  /* hero */
+  .hero{padding:90px 0 60px;position:relative}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:26px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--amber)}
+  h1{
+    font-family:var(--disp);font-weight:800;line-height:.96;letter-spacing:-.02em;
+    font-size:clamp(2.6rem,8vw,5.6rem);text-transform:uppercase;
+  }
+  h1 .amb{color:var(--amber);display:inline-block}
+  h1 .car{display:inline-block;width:.55ch;height:.9em;background:var(--amber);vertical-align:-.06em;
+    margin-left:.08em;animation:blink 1.1s steps(1) infinite;box-shadow:0 0 14px var(--amber)}
+  @keyframes blink{50%{opacity:0}}
+  .lede{max-width:54ch;color:var(--dim);font-size:1.08rem;margin-top:30px}
+  .lede b{color:var(--ink);font-weight:600}
+
+  /* primary command */
+  .cmd{
+    display:flex;align-items:center;gap:14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;padding:16px 16px 16px 20px;
+    font-family:var(--mono);font-size:.92rem;position:relative;overflow:hidden;
+  }
+  .cmd::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--amber)}
+  .cmd .pr{color:var(--amber);user-select:none}
+  .cmd code{flex:1;white-space:nowrap;overflow-x:auto;color:var(--ink)}
+  .cmd code::-webkit-scrollbar{height:0}
+  .copy{
+    font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--bg);background:var(--amber);border:none;border-radius:7px;padding:9px 13px;
+    cursor:pointer;transition:transform .15s,background .2s;white-space:nowrap;font-weight:600;
+  }
+  .copy:hover{transform:translateY(-1px);background:var(--amber-2)}
+  .copy.done{background:var(--ok)}
+  .hero .cmd{margin-top:40px;max-width:780px}
+
+  /* section heading */
+  .sec{padding:64px 0;border-top:1px solid var(--line)}
+  .sec-h{font-family:var(--mono);font-size:.76rem;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--dim);margin-bottom:8px;display:flex;gap:12px;align-items:center}
+  .sec-h .n{color:var(--amber)}
+  .sec h2{font-family:var(--disp);font-weight:700;font-size:clamp(1.5rem,3.4vw,2.2rem);
+    text-transform:uppercase;letter-spacing:-.01em;margin-bottom:30px}
+
+  /* steps / terminal */
+  .term{background:var(--bg-2);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    box-shadow:0 30px 80px -40px rgba(0,0,0,.9)}
+  .term-top{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line-soft);
+    background:rgba(255,182,39,.03)}
+  .term-top i{width:11px;height:11px;border-radius:50%;display:block;background:var(--faint)}
+  .term-top i:nth-child(1){background:var(--amber)}
+  .term-top .tt{font-family:var(--mono);font-size:.72rem;color:var(--dim);margin-left:8px}
+  .term-top .all{margin-left:auto}
+  .term-body{padding:20px 22px;font-family:var(--mono);font-size:.88rem}
+  .ln{display:flex;gap:14px;padding:7px 0;align-items:baseline}
+  .ln .c{color:var(--amber);user-select:none}
+  .ln .t{color:var(--ink);flex:1}
+  .ln .t .cm{color:var(--faint)}
+  .ln + .ln{border-top:1px dashed var(--line-soft)}
+
+  /* plugin grid */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;
+    position:relative;transition:transform .25s,border-color .25s,background .25s;overflow:hidden;
+  }
+  .card::after{content:"";position:absolute;inset:0;background:
+    radial-gradient(120% 80% at 100% 0,rgba(255,182,39,.07),transparent 55%);opacity:0;transition:opacity .3s}
+  .card:hover{transform:translateY(-4px);border-color:var(--amber);background:#15151b}
+  .card:hover::after{opacity:1}
+  .card .id{font-family:var(--mono);font-size:.7rem;color:var(--faint);letter-spacing:.1em}
+  .card h3{font-family:var(--disp);font-weight:700;font-size:1.18rem;margin:6px 0 12px;letter-spacing:-.01em}
+  .card h3 b{color:var(--amber)}
+  .card p{color:var(--dim);font-size:.93rem;min-height:3.4em}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0}
+  .tag{font-family:var(--mono);font-size:.66rem;color:var(--dim);border:1px solid var(--line-soft);
+    border-radius:999px;padding:3px 9px}
+  .tag.dep{color:var(--amber-2);border-color:rgba(255,138,61,.3)}
+  .mini{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line-soft);
+    border-radius:9px;padding:9px 9px 9px 13px;font-family:var(--mono);font-size:.78rem}
+  .mini code{flex:1;white-space:nowrap;overflow-x:auto;color:var(--ink)}
+  .mini code::-webkit-scrollbar{height:0}
+  .mini .pr{color:var(--amber)}
+  .mini .copy{padding:7px 10px;font-size:.62rem}
+
+  /* dependency map */
+  .map{display:grid;grid-template-columns:1fr;gap:22px;margin-top:8px}
+  .map .row{display:flex;align-items:stretch;gap:18px;flex-wrap:wrap}
+  .node{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px}
+  .node .k{font-family:var(--mono);font-weight:600;color:var(--amber);font-size:.92rem}
+  .node .v{color:var(--dim);font-size:.82rem;margin-top:4px}
+  .node.base{border-style:dashed;border-color:var(--line)}
+  .node.found{border-color:rgba(255,138,61,.4);background:linear-gradient(180deg,rgba(255,138,61,.06),var(--panel))}
+  .rail{font-family:var(--mono);font-size:.72rem;color:var(--faint);letter-spacing:.2em;text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;padding:2px 0}
+  .rail::before,.rail::after{content:"";height:1px;flex:1;background:var(--line)}
+
+  /* prereq list */
+  .pre{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .pre .it{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .pre .it .h{font-family:var(--mono);font-size:.82rem;color:var(--amber);margin-bottom:6px}
+  .pre .it p{color:var(--dim);font-size:.88rem}
+  .pre code{font-family:var(--mono);color:var(--ink);background:var(--bg);padding:1px 6px;border-radius:5px;
+    border:1px solid var(--line-soft);font-size:.84em}
+
+  footer{border-top:1px solid var(--line);padding:40px 0 60px;color:var(--faint);font-family:var(--mono);
+    font-size:.78rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+  footer a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line)}
+  footer a:hover{color:var(--amber);border-color:var(--amber)}
+
+  /* reveal */
+  .rv{opacity:0;transform:translateY(18px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.rv{animation:none;opacity:1;transform:none}.car{animation:none}}
+
+  @media(max-width:720px){
+    .grid,.pre{grid-template-columns:1fr}
+    .hero{padding:60px 0 40px}
+    .cmd code{font-size:.82rem}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;width:100%">
+    <span class="brand"><span class="dot"></span>ezacae-tooling</span>
+    <span class="ver">marketplace · v0.1.0</span>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow rv">Plugins Claude Code · usage interne</div>
+    <h1 class="rv" style="animation-delay:.06s">Outillage<br><span class="amb">ezacae</span> en 5&nbsp;lignes<span class="car"></span></h1>
+    <p class="lede rv" style="animation-delay:.14s">
+      Le marketplace qui packe les commandes, skills et agents ezacae —
+      <b>Mike</b>, <b>Sarah</b>, <b>chuck</b>, <b>morgan</b>, le pipeline JIRA —
+      en quatre plugins versionnés. Fini le copier-coller dans chaque <b>~/.claude</b>.
+    </p>
+    <div class="cmd rv" style="animation-delay:.22s">
+      <span class="pr">&gt;</span>
+      <code id="c0">/plugin marketplace add git@gitlab.com:ezacae/ezacae-claude-tooling.git</code>
+      <button class="copy" data-copy="#c0">Copier</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- INSTALL -->
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-h rv"><span class="n">01</span> / Installation</div>
+      <h2 class="rv">Les quatre plugins</h2>
+      <div class="term rv" style="animation-delay:.06s">
+        <div class="term-top">
+          <i></i><i></i><i></i>
+          <span class="tt">claude code · /plugin</span>
+          <button class="copy all" data-copy="#seq">Copier la séquence</button>
+        </div>
+        <div class="term-body">
+          <div class="ln"><span class="c">$</span><span class="t">/plugin marketplace add <span class="cm">git@gitlab.com:ezacae/ezacae-claude-tooling.git</span></span></div>
+          <div class="ln"><span class="c">$</span><span class="t">/plugin install ezacae-base@ezacae-tooling</span></div>
+          <div class="ln"><span class="c">$</span><span class="t">/plugin install ezacae-jira@ezacae-tooling</span></div>
+          <div class="ln"><span class="c">$</span><span class="t">/plugin install ezacae-doc@ezacae-tooling</span></div>
+          <div class="ln"><span class="c">$</span><span class="t">/plugin install ezacae-dev@ezacae-tooling</span></div>
+        </div>
+      </div>
+      <textarea id="seq" style="position:absolute;left:-9999px" readonly>/plugin marketplace add git@gitlab.com:ezacae/ezacae-claude-tooling.git
+/plugin install ezacae-base@ezacae-tooling
+/plugin install ezacae-jira@ezacae-tooling
+/plugin install ezacae-doc@ezacae-tooling
+/plugin install ezacae-dev@ezacae-tooling</textarea>
+    </div>
+  </section>
+
+  <!-- PLUGINS -->
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-h rv"><span class="n">02</span> / Catalogue</div>
+      <h2 class="rv">Ce que chaque plugin apporte</h2>
+      <div class="grid">
+
+        <article class="card rv">
+          <div class="id">pkg_00</div>
+          <h3><b>ezacae-</b>base</h3>
+          <p>Conventions globales ezacae (contexte, stack documentaire, règles éditoriales) injectées en contexte à chaque session. Source unique d'équipe.</p>
+          <div class="tags"><span class="tag">hook SessionStart</span><span class="tag">conventions.md</span></div>
+          <div class="mini"><span class="pr">&gt;</span><code id="p0">/plugin install ezacae-base@ezacae-tooling</code><button class="copy" data-copy="#p0">⧉</button></div>
+        </article>
+
+        <article class="card rv" style="animation-delay:.05s">
+          <div class="id">pkg_01</div>
+          <h3><b>ezacae-</b>jira</h3>
+          <p>Infra du pipeline JIRA Mike ⇄ Sarah : skill <code style="font-family:var(--mono);color:var(--amber)">jira-pipeline</code>, helpers REST, hooks de pré-checks et garde de statut.</p>
+          <div class="tags"><span class="tag">skill</span><span class="tag">helpers REST</span><span class="tag">2 hooks</span></div>
+          <div class="mini"><span class="pr">&gt;</span><code id="p1">/plugin install ezacae-jira@ezacae-tooling</code><button class="copy" data-copy="#p1">⧉</button></div>
+        </article>
+
+        <article class="card rv" style="animation-delay:.1s">
+          <div class="id">pkg_02</div>
+          <h3><b>ezacae-</b>doc</h3>
+          <p>Orchestrateur <b style="color:var(--ink)">Mike</b> (PO/CTO) et commandes vision · personas · processus, avec les agents doc-writer &amp; stack-writer.</p>
+          <div class="tags"><span class="tag">6 commandes</span><span class="tag">2 agents</span><span class="tag dep">→ jira</span></div>
+          <div class="mini"><span class="pr">&gt;</span><code id="p2">/plugin install ezacae-doc@ezacae-tooling</code><button class="copy" data-copy="#p2">⧉</button></div>
+        </article>
+
+        <article class="card rv" style="animation-delay:.15s">
+          <div class="id">pkg_03</div>
+          <h3><b>ezacae-</b>dev</h3>
+          <p>Orchestrateur <b style="color:var(--ink)">Sarah</b> + skills chuck · john · morgan · grill-me · handoff, et agents auto-suffisants morgan/john.</p>
+          <div class="tags"><span class="tag">2 commandes</span><span class="tag">5 skills</span><span class="tag">4 agents</span><span class="tag dep">→ jira</span></div>
+          <div class="mini"><span class="pr">&gt;</span><code id="p3">/plugin install ezacae-dev@ezacae-tooling</code><button class="copy" data-copy="#p3">⧉</button></div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- DEPENDENCIES -->
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-h rv"><span class="n">03</span> / Dépendances</div>
+      <h2 class="rv">Comment ça s'emboîte</h2>
+      <div class="map rv" style="animation-delay:.05s">
+        <div class="row">
+          <div class="node base"><div class="k">ezacae-base</div><div class="v">Conventions — autonome, n'a besoin de rien.</div></div>
+        </div>
+        <div class="rail">socle pipeline</div>
+        <div class="row">
+          <div class="node found"><div class="k">ezacae-jira</div><div class="v">Skill, helpers &amp; hooks JIRA. Requis par Mike et Sarah en mode pipeline.</div></div>
+        </div>
+        <div class="rail">consommateurs</div>
+        <div class="row">
+          <div class="node"><div class="k">ezacae-doc → Mike</div><div class="v">Cadre le ticket, met à jour la doc, passe la main à Sarah.</div></div>
+          <div class="node"><div class="k">ezacae-dev → Sarah</div><div class="v">Conception → implémentation → revue, puis rend la main à Mike.</div></div>
+        </div>
+      </div>
+      <p class="lede rv" style="margin-top:28px;animation-delay:.1s">
+        Le pipeline complet <b>/mike&nbsp;&lt;KEY&gt;</b> → <b>/sarah&nbsp;&lt;KEY&gt;</b> → <b>/mike&nbsp;&lt;KEY&gt;</b>
+        suppose les trois plugins outils + leur socle <b>ezacae-jira</b>. Hors pipeline, chaque plugin fonctionne seul.
+      </p>
+    </div>
+  </section>
+
+  <!-- PREREQ -->
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-h rv"><span class="n">04</span> / Avant de lancer</div>
+      <h2 class="rv">Pré-requis</h2>
+      <div class="pre">
+        <div class="it rv"><div class="h">⌘ Claude Code</div><p>CLI, app desktop ou extension IDE — n'importe quel client qui charge les plugins de marketplace.</p></div>
+        <div class="it rv" style="animation-delay:.05s"><div class="h">🔑 jira.env par projet</div><p>Mode pipeline : copier <code>jira.env.example</code> (livré par ezacae-jira) en <code>.claude/jira.env</code> dans le dépôt, et le garder <b>gitignoré</b>.</p></div>
+        <div class="it rv" style="animation-delay:.1s"><div class="h">🧰 jq</div><p>Requis par les helpers JIRA et la garde de statut. <code>brew install jq</code>.</p></div>
+        <div class="it rv" style="animation-delay:.15s"><div class="h">📂 contexte projet</div><p>Les commandes Mike lisent <code>.claude/CLAUDE.md</code> et <code>.claude/doc-manifest.md</code> du dépôt — état propre à chaque projet.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;width:100%">
+    <span>ezacae · marketplace interne Claude Code</span>
+    <a href="https://gitlab.com/ezacae/ezacae-claude-tooling">git@gitlab.com:ezacae/ezacae-claude-tooling.git</a>
+  </div>
+</footer>
+
+<script>
+  // copy-to-clipboard
+  function flash(btn, label){
+    const old = btn.textContent;
+    btn.textContent = label; btn.classList.add('done');
+    setTimeout(()=>{btn.textContent=old; btn.classList.remove('done');},1400);
+  }
+  document.querySelectorAll('.copy').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const el = document.querySelector(btn.dataset.copy);
+      const text = (el.value ?? el.textContent).trim();
+      try{
+        await navigator.clipboard.writeText(text);
+      }catch(e){
+        el.focus && el.select && el.select();
+        document.execCommand && document.execCommand('copy');
+      }
+      flash(btn, btn.classList.contains('all') ? 'Copié ✓' : '✓');
+    });
+  });
+</script>
+</body>
+</html>

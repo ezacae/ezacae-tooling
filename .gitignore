@@ -3,3 +3,4 @@
 # Secret par projet — jamais ici (ne vit que dans <projet>/.claude/)
 jira.env
 .claude/local.md
+/ezacae-claude-tooling.iml
