@@ -7,13 +7,13 @@
 Le marketplace qui packe les commandes, skills et agents ezacae — **Mike**, **Sarah**, **chuck**, **morgan**, le pipeline JIRA — en quatre plugins versionnés. Fini le copier-coller dans chaque `~/.claude`.
 
 ```text
-/plugin marketplace add git@gitlab.com:ezacae/ezacae-claude-tooling.git
+/plugin marketplace add https://gitlab.com/ezacae/ezacae-claude-tooling.git
 ```
 
 ## 01 · Installation — les quatre plugins
 
 ```text
-/plugin marketplace add git@gitlab.com:ezacae/ezacae-claude-tooling.git
+/plugin marketplace add https://gitlab.com/ezacae/ezacae-claude-tooling.git
 /plugin install ezacae-base@ezacae-tooling
 /plugin install ezacae-jira@ezacae-tooling
 /plugin install ezacae-doc@ezacae-tooling
