@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "claude.ai Atlassian": {
+      "type": "remote",
+      "url": "https://mcp.claude.ai/mcp/atlassian",
+      "note": "MCP Atlassian distant — credentials OAuth injectés via ~/.claude/.credentials.json"
+    }
+  },
+  "pluginsDirectory": "/opt/ezacae-tooling",
+  "activePlugins": [
+    "ezacae-base",
+    "ezacae-jira",
+    "ezacae-doc"
+  ]
+}
