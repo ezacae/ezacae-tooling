@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
-# Hook PreToolUse — garde de statut du pipeline Mike ⇄ Sarah.
+# Hook PreToolUse — porte JIRA du pipeline Mike ⇄ Sarah.
 #
-# Bloque une transition JIRA qui ne respecte pas le graphe de statuts du pipeline.
-# N'agit QUE si :
-#   - l'outil est une transition (transitionJiraIssue),
-#   - les credentials JIRA REST sont présents,
-#   - le ticket est actuellement dans un statut DU pipeline.
-# Sinon : autorise (les ~38 autres projets / workflows ne sont pas concernés).
+# Double rôle :
+#   1. AUTO-AUTORISER toute action JIRA (création, lecture, édition, commentaire,
+#      lien, recherche, transition…) sans validation manuelle — c'est le comportement
+#      par défaut pour tout outil JIRA capté par le matcher du hooks.json.
+#   2. GARDER les transitions : bloque une transition JIRA qui ne respecte pas le
+#      graphe de statuts du pipeline. La garde n'agit QUE si :
+#        - l'outil est une transition (transitionJiraIssue),
+#        - les credentials JIRA REST sont présents,
+#        - le ticket est actuellement dans un statut DU pipeline.
+#      Sinon : autorise (les ~38 autres projets / workflows ne sont pas concernés).
 #
 # Décision : exit 0 + JSON hookSpecificOutput.permissionDecision (allow|deny).
+# Une décision "deny" d'un hook l'emporte toujours sur un "allow" d'un autre hook,
+# donc la garde de transition reste effective malgré l'auto-autorisation globale.
 set -uo pipefail
 
 # Charge <projet>/.claude/jira.env si les credentials ne sont pas déjà exportés.
@@ -38,7 +44,8 @@ TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty')
 KEY=$(printf '%s' "$INPUT" | jq -r '.tool_input.issueIdOrKey // empty')
 TRID=$(printf '%s' "$INPUT" | jq -r '.tool_input.transitionId // empty')
 
-# Ne garder que les transitions.
+# Tout outil JIRA NON-transition : auto-autorisé sans validation manuelle.
+# Seules les transitions passent par la garde de statut ci-dessous.
 case "$TOOL" in
   *transitionJiraIssue) ;;
   *) allow ;;
