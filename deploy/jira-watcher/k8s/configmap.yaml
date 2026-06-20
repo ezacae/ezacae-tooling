@@ -23,7 +23,8 @@ data:
     # Retrait manuel requis pour relancer un ticket en échec
     claim_label: "claude-traite"
 
-    # Statuts déclencheurs (insensible à la casse côté JIRA)
+    # Statuts déclencheurs. JIRA résout les noms de statut sans tenir compte de
+    # la casse, mais le libellé doit correspondre exactement à celui de l'instance.
     watched_statuses:
       - "NOUVEAU"
 
@@ -33,5 +34,7 @@ data:
     # Timeout par run /mike en secondes (cycle complet peut prendre jusqu'à 60 min)
     claude_timeout_seconds: 3600
 
-    # Nombre maximum de tickets traités par cycle (garde-fou)
-    max_issues_per_run: 10
+    # Nombre maximum de tickets traités par cycle (garde-fou).
+    # Volontairement bas : chaque /mike peut durer longtemps et concurrencyPolicy
+    # est Forbid. ⚠️ Si modifié, mettre à jour activeDeadlineSeconds dans cronjob.yaml.
+    max_issues_per_run: 4

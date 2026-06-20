@@ -9,6 +9,7 @@ from typing import Any
 from unittest.mock import MagicMock, call
 
 import pytest
+from requests.exceptions import HTTPError as RequestsHTTPError
 
 from jira_watcher.jira_client import JiraClient, JiraHttpError
 
@@ -25,9 +26,9 @@ def make_response(status_code: int = 200, json_body: Any = None) -> MagicMock:
     resp.json.return_value = json_body or {}
     resp.text = json.dumps(json_body or {})
     if status_code >= 400:
-        resp.raise_for_status.side_effect = JiraHttpError(
-            f"HTTP {status_code}", response=resp
-        )
+        # Simule le comportement réel de requests : raise_for_status lève
+        # requests.HTTPError, que JiraClient traduit en JiraHttpError.
+        resp.raise_for_status.side_effect = RequestsHTTPError(f"HTTP {status_code}")
     else:
         resp.raise_for_status.return_value = None
     return resp
@@ -90,7 +91,7 @@ class TestSearchKeys:
         client.search_keys("project IN (CRM)", max_results=5)
         call_kwargs = http.get.call_args
         url = call_kwargs[0][0] if call_kwargs[0] else call_kwargs[1].get("url", "")
-        assert "/rest/api/3/search" in url
+        assert "/rest/api/3/search/jql" in url
 
     def test_max_results_passe_en_parametre(self):
         http = MagicMock()

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from requests.exceptions import HTTPError as RequestsHTTPError
+
 
 class HttpProtocol(Protocol):
     """Interface minimale compatible requests.Session."""
@@ -58,7 +60,10 @@ class JiraClient:
         Raises:
             JiraHttpError: si l'API retourne un code d'erreur HTTP.
         """
-        url = f"{self._base}/rest/api/3/search"
+        # /rest/api/3/search a été retiré de Jira Cloud (2025) : on utilise
+        # le nouvel endpoint /rest/api/3/search/jql (param fields toujours
+        # supporté ; pour notre usage borné, maxResults suffit à plafonner).
+        url = f"{self._base}/rest/api/3/search/jql"
         response = self._http.get(
             url,
             auth=self._auth,
@@ -68,7 +73,7 @@ class JiraClient:
                 "fields": "key",
             },
         )
-        response.raise_for_status()
+        self._raise_for_status(response)
         data: dict[str, Any] = response.json()
         return [issue["key"] for issue in data.get("issues", [])]
 
@@ -106,4 +111,17 @@ class JiraClient:
             auth=self._auth,
             json={"update": {"labels": [{operation: label}]}},
         )
-        response.raise_for_status()
+        self._raise_for_status(response)
+
+    @staticmethod
+    def _raise_for_status(response: Any) -> None:
+        """Convertit une erreur HTTP requests en JiraHttpError.
+
+        `requests.Response.raise_for_status()` lève `requests.HTTPError` ;
+        on la traduit en `JiraHttpError` pour que les appelants n'aient qu'un
+        seul type d'exception à intercepter.
+        """
+        try:
+            response.raise_for_status()
+        except RequestsHTTPError as exc:
+            raise JiraHttpError(str(exc), response=response) from exc

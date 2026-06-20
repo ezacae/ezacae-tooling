@@ -22,10 +22,12 @@ spec:
       # Pas de retry automatique — la déduplication par étiquette protège
       backoffLimit: 0
 
-      # Timeout global : max_issues_per_run × claude_timeout_seconds + marge
-      # 10 × 3600 s = 36000 s + marge 600 s = 36600 s ≈ 10,2 h (pire cas)
-      # En pratique, ajuster selon le nombre de tickets attendus par cycle.
-      activeDeadlineSeconds: 36600
+      # Timeout global : max_issues_per_run × claude_timeout_seconds + marge.
+      # = 4 × 3600 s + 600 s = 15000 s (~4,2 h, pire cas).
+      # ⚠️ SYNCHRONISER avec configmap.yaml (max_issues_per_run, claude_timeout_seconds).
+      # Un batch plein peut, avec concurrencyPolicy: Forbid, espacer les cycles
+      # bien au-delà de 15 min : garder max_issues_per_run bas (cf. README).
+      activeDeadlineSeconds: 15000
 
       template:
         metadata:
@@ -98,5 +100,7 @@ spec:
                 items:
                   - key: claude-credentials.json
                     path: claude-credentials.json
-                # Mode 0600 : lecture seule pour le propriétaire
-                defaultMode: 0600
+                # 0640 : le propriétaire (root) écrit, le groupe fsGroup (1000)
+                # lit. Le process tourne en runAsUser 1000 / fsGroup 1000 ; en
+                # 0600 le groupe n'aurait aucun droit → credentials illisibles.
+                defaultMode: 0640
