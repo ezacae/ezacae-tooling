@@ -23,7 +23,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN npm install -g @anthropic-ai/claude-code
 
 # --- Utilisateur non-root ---
-RUN useradd --create-home --shell /bin/bash --uid 1000 claude
+# L'image node:bookworm fournit déjà un utilisateur `node` à l'UID/GID 1000 ;
+# on le supprime pour libérer 1000 et créer `claude` (HOME=/home/claude).
+# Le CronJob k8s impose runAsUser/runAsGroup 1000.
+RUN userdel --remove node \
+    && useradd --create-home --shell /bin/bash --uid 1000 --user-group claude
 ENV HOME=/home/claude
 
 # --- Plugins ezacae (marketplace local bakés dans l'image) ---
