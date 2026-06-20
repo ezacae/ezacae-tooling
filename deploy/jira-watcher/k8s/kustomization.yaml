@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: jira-watcher
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - cronjob.yaml
+  # secret.example.yaml n'est PAS inclus — le secret réel est créé hors Git
+  # application.yaml n'est PAS inclus ici (CRD ArgoCD, appliqué séparément)
+
+commonLabels:
+  app.kubernetes.io/part-of: ezacae-tooling
+  app.kubernetes.io/managed-by: argocd

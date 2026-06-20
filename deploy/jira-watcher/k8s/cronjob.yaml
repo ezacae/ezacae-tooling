@@ -1,0 +1,102 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: jira-watcher
+  namespace: jira-watcher
+  labels:
+    app.kubernetes.io/name: jira-watcher
+    app.kubernetes.io/component: cronjob
+spec:
+  # Toutes les 15 minutes
+  schedule: "*/15 * * * *"
+
+  # Empêche le recouvrement de runs (un cycle /mike peut durer jusqu'à 60 min)
+  concurrencyPolicy: Forbid
+
+  # Pas de tentative de reprise automatique (logs → alerte manuelle)
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      # Pas de retry automatique — la déduplication par étiquette protège
+      backoffLimit: 0
+
+      # Timeout global : max_issues_per_run × claude_timeout_seconds + marge
+      # 10 × 3600 s = 36000 s + marge 600 s = 36600 s ≈ 10,2 h (pire cas)
+      # En pratique, ajuster selon le nombre de tickets attendus par cycle.
+      activeDeadlineSeconds: 36600
+
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: jira-watcher
+        spec:
+          restartPolicy: Never
+
+          serviceAccountName: jira-watcher
+
+          # Conteneur non-root sans privilèges
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+
+          containers:
+            - name: jira-watcher
+              image: registry.gitlab.com/ezacae/ezacae-claude-tooling/jira-watcher:latest
+              imagePullPolicy: Always
+
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop: ["ALL"]
+
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+
+              # Variables d'environnement depuis le Secret
+              env:
+                - name: JIRA_EMAIL
+                  valueFrom:
+                    secretKeyRef:
+                      name: jira-watcher-secrets
+                      key: jira-email
+                - name: JIRA_API_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: jira-watcher-secrets
+                      key: jira-api-token
+
+              # Montages de volumes
+              volumeMounts:
+                # ConfigMap montée en fichier
+                - name: config
+                  mountPath: /etc/jira-watcher
+                  readOnly: true
+                # Credentials Claude + MCP Atlassian (OAuth)
+                - name: claude-credentials
+                  mountPath: /home/claude/.claude/.credentials.json
+                  subPath: claude-credentials.json
+                  readOnly: true
+
+          volumes:
+            - name: config
+              configMap:
+                name: jira-watcher-config
+
+            - name: claude-credentials
+              secret:
+                secretName: jira-watcher-secrets
+                items:
+                  - key: claude-credentials.json
+                    path: claude-credentials.json
+                # Mode 0600 : lecture seule pour le propriétaire
+                defaultMode: 0600
