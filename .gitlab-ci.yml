@@ -2,3 +2,57 @@ include:
   - project: 'ezacae/ezacae-ci-utils'
     ref: main
     file: 'gitlab-ci-common.yml'
+
+# ---------------------------------------------------------------------------
+# Build & push de l'image jira-watcher (deploy/jira-watcher/)
+#
+# Construite avec docker:dind (runners ezacae en mode docker-in-docker).
+# Le job vit dans le stage intégré `.pre` pour NE PAS redéfinir la clé `stages`
+# du template commun inclus ci-dessus (qu'on n'écrase donc pas).
+#
+# Contexte de build = racine du dépôt : le Dockerfile copie `plugins/` et
+# `deploy/jira-watcher/`. L'image cible `${CI_REGISTRY_IMAGE}/jira-watcher`,
+# référencée par k8s/cronjob.yaml.
+#
+# Déclenchement (uniquement si les fichiers pertinents changent) :
+#   - pipeline de merge request → build de validation SANS push
+#   - branche par défaut        → push des tags `<sha>` et `latest`
+# ---------------------------------------------------------------------------
+build-jira-watcher-image:
+  stage: .pre
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: "/certs/client"
+    IMAGE: "${CI_REGISTRY_IMAGE}/jira-watcher"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: &jira_watcher_changes
+        - deploy/jira-watcher/**/*
+        - plugins/**/*
+        - .gitlab-ci.yml
+      variables:
+        DO_PUSH: "false"
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: *jira_watcher_changes
+      variables:
+        DO_PUSH: "true"
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - docker build
+      -f "deploy/jira-watcher/Dockerfile"
+      -t "${IMAGE}:${CI_COMMIT_SHORT_SHA}"
+      .
+    - |
+      if [ "$DO_PUSH" = "true" ]; then
+        docker tag "${IMAGE}:${CI_COMMIT_SHORT_SHA}" "${IMAGE}:latest"
+        docker push "${IMAGE}:${CI_COMMIT_SHORT_SHA}"
+        docker push "${IMAGE}:latest"
+      else
+        echo "Pipeline de merge request : build de validation uniquement (pas de push)."
+      fi
