@@ -2,3 +2,52 @@ include:
   - project: 'ezacae/ezacae-ci-utils'
     ref: main
     file: 'gitlab-ci-common.yml'
+
+# ---------------------------------------------------------------------------
+# Build & push de l'image jira-watcher (deploy/jira-watcher/)
+#
+# Construite avec kaniko (pas de mode privilégié requis sur les runners SaaS).
+# Le job vit dans le stage intégré `.pre` pour NE PAS redéfinir la clé `stages`
+# du template commun inclus ci-dessus (qu'on n'écrase donc pas).
+#
+# Contexte de build = racine du dépôt : le Dockerfile copie `plugins/` et
+# `deploy/jira-watcher/`. L'image cible `${CI_REGISTRY_IMAGE}/jira-watcher`,
+# référencée par k8s/cronjob.yaml.
+#
+# Déclenchement (uniquement si les fichiers pertinents changent) :
+#   - pipeline de merge request → build de validation SANS push (`--no-push`)
+#   - branche par défaut        → push des tags `<sha>` et `latest`
+# ---------------------------------------------------------------------------
+build-jira-watcher-image:
+  stage: .pre
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: &jira_watcher_changes
+        - deploy/jira-watcher/**/*
+        - plugins/**/*
+        - .gitlab-ci.yml
+      variables:
+        KANIKO_PUSH_FLAG: "--no-push"
+        KANIKO_LATEST_DESTINATION: ""
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: *jira_watcher_changes
+      variables:
+        KANIKO_PUSH_FLAG: ""
+        KANIKO_LATEST_DESTINATION: "--destination ${CI_REGISTRY_IMAGE}/jira-watcher:latest"
+  before_script:
+    # Authentification kaniko auprès du registry GitLab via le jeton de job.
+    - mkdir -p /kaniko/.docker
+    - >-
+      echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf '%s:%s' "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}"
+      > /kaniko/.docker/config.json
+  script:
+    - >-
+      /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/deploy/jira-watcher/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}/jira-watcher:${CI_COMMIT_SHORT_SHA}"
+      ${KANIKO_LATEST_DESTINATION}
+      ${KANIKO_PUSH_FLAG}
