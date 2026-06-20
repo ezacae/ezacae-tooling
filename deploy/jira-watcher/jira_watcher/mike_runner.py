@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import subprocess
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from jira_watcher.config import WatcherConfig
 
@@ -68,7 +68,11 @@ def build_invocation(
 def _default_runner(
     argv: list[str], prompt: str, env: dict[str, str], timeout: int
 ) -> Any:
-    """Runner de production : appelle subprocess.run."""
+    """Runner de production : appelle subprocess.run.
+
+    `prompt` est déjà inclus dans `argv` (option `-p`) ; il n'est conservé
+    dans la signature que pour le logging et les tests (paramètre non utilisé ici).
+    """
     return subprocess.run(
         argv,
         capture_output=True,

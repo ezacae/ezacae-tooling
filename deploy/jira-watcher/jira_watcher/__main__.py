@@ -23,7 +23,7 @@ from jira_watcher.config import ConfigError, load_config
 from jira_watcher.jira_client import JiraClient, JiraHttpError
 from jira_watcher.jql import build_jql
 from jira_watcher.mike_runner import run as mike_run
-from jira_watcher.orchestrator import RunReport, process
+from jira_watcher.orchestrator import process
 
 # ---------------------------------------------------------------------------
 # Configuration du logging structuré (JSON-friendly en prod, lisible en dev)
@@ -44,8 +44,8 @@ _DEFAULT_CONFIG_PATH = "/etc/jira-watcher/config.yaml"
 # ---------------------------------------------------------------------------
 
 
-def run_dry_run(client: JiraClient, config) -> list[str]:
-    """Mode dry-run : retourne les clés éligibles sans aucun effet de bord.
+def fetch_eligible_keys(client: JiraClient, config) -> list[str]:
+    """Retourne les clés de tickets éligibles, sans aucun effet de bord.
 
     Args:
         client: client JIRA.
@@ -60,14 +60,22 @@ def run_dry_run(client: JiraClient, config) -> list[str]:
     return keys
 
 
-# ---------------------------------------------------------------------------
-# Runner de production (wrapper autour de mike_run)
-# ---------------------------------------------------------------------------
+def claude_credentials_path() -> Path:
+    """Chemin attendu des credentials OAuth Claude (CLI + MCP)."""
+    return Path.home() / ".claude" / ".credentials.json"
 
 
-def _production_runner(key: str, config) -> object:
-    """Runner de production : appelle mike_run avec subprocess réel."""
-    return mike_run(key, config)
+def claude_credentials_ok(path: Path) -> bool:
+    """Vrai si le fichier de credentials Claude existe et est non vide.
+
+    Pré-contrôle léger (pas d'appel réseau) : détecte des credentials absents
+    ou vides avant de lancer /mike. NB : un token présent mais expiré n'est
+    PAS détecté ici — seul un run /mike réel le révélera (cf. README §exploitation).
+    """
+    try:
+        return path.is_file() and path.stat().st_size > 0
+    except OSError:
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -135,27 +143,40 @@ def main(argv: list[str] | None = None) -> int:
     # 4. Mode dry-run : lister les tickets et sortir
     if args.dry_run:
         try:
-            keys = run_dry_run(client, config)
+            keys = fetch_eligible_keys(client, config)
             print(json.dumps({"dry_run": True, "eligible_keys": keys}, ensure_ascii=False))
         except JiraHttpError as exc:
             logger.error("Erreur JIRA (dry-run) : %s", exc)
             return 1
         return 0
 
-    # 5. Cycle complet
+    # 5. Pré-contrôle des credentials Claude (nécessaires à /mike).
+    creds_path = claude_credentials_path()
+    if not claude_credentials_ok(creds_path):
+        logger.error(
+            "Credentials Claude introuvables ou vides : %s — voir README §exploitation",
+            creds_path,
+        )
+        return 1
+
+    # 6. Cycle complet
     try:
-        report = process(client, config, _production_runner)
+        report = process(client, config, mike_run)
     except JiraHttpError as exc:
         logger.error("Erreur d'infrastructure JIRA : %s", exc)
         return 1
 
-    # 6. Logguer le rapport JSON
+    # 7. Logguer le rapport JSON
     report_json = json.dumps(report.to_dict(), ensure_ascii=False)
     logger.info("RunReport : %s", report_json)
     print(report_json)
 
-    # Code de sortie ≠ 0 seulement si tous les tickets ont échoué
-    # (un seul succès = cycle viable)
+    # Code de sortie ≠ 0 sur erreur d'infrastructure (claim JIRA échoué)...
+    if report.infra_failed > 0:
+        logger.warning("%d échec(s) d'infrastructure ce cycle.", report.infra_failed)
+        return 1
+
+    # ...ou si tous les /mike traités ont échoué (un seul succès = cycle viable).
     if report.processed > 0 and report.ok == 0 and report.failed == report.processed:
         logger.warning("Tous les runs /mike ont échoué ce cycle.")
         return 1

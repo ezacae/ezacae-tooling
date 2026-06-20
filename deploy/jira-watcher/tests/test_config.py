@@ -74,3 +74,23 @@ class TestLoadConfigValidation:
     def test_jira_base_url_vide_leve_config_error(self):
         with pytest.raises(ConfigError, match="jira_base_url"):
             load_config(self._mapping(jira_base_url=""))
+
+    def test_trigger_label_vide_leve_config_error(self):
+        with pytest.raises(ConfigError, match="trigger_label"):
+            load_config(self._mapping(trigger_label=""))
+
+    def test_trigger_label_absent_leve_config_error(self):
+        m = self._mapping()
+        del m["trigger_label"]
+        with pytest.raises(ConfigError, match="trigger_label"):
+            load_config(m)
+
+    def test_claim_label_vide_leve_config_error(self):
+        with pytest.raises(ConfigError, match="claim_label"):
+            load_config(self._mapping(claim_label=""))
+
+    def test_claim_label_absent_leve_config_error(self):
+        m = self._mapping()
+        del m["claim_label"]
+        with pytest.raises(ConfigError, match="claim_label"):
+            load_config(m)

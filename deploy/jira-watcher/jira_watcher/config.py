@@ -49,6 +49,14 @@ def load_config(mapping: dict[str, Any]) -> WatcherConfig:
     if not projects:
         raise ConfigError("projects ne peut pas être vide")
 
+    trigger_label: str = str(mapping.get("trigger_label", ""))
+    if not trigger_label:
+        raise ConfigError("trigger_label ne peut pas être vide")
+
+    claim_label: str = str(mapping.get("claim_label", ""))
+    if not claim_label:
+        raise ConfigError("claim_label ne peut pas être vide")
+
     watched_statuses: list[str] = list(mapping.get("watched_statuses", []))
     if not watched_statuses:
         raise ConfigError("watched_statuses ne peut pas être vide")
@@ -74,8 +82,8 @@ def load_config(mapping: dict[str, Any]) -> WatcherConfig:
     return WatcherConfig(
         jira_base_url=jira_base_url,
         projects=projects,
-        trigger_label=str(mapping.get("trigger_label", "")),
-        claim_label=str(mapping.get("claim_label", "")),
+        trigger_label=trigger_label,
+        claim_label=claim_label,
         watched_statuses=watched_statuses,
         slash_command=slash_command,
         claude_timeout_seconds=claude_timeout_seconds,

@@ -21,9 +21,15 @@ La ConfigMap `jira-watcher-config` est montée en `/etc/jira-watcher/config.yaml
 | `watched_statuses` | list[str] | Statuts déclencheurs (ex. `["NOUVEAU"]`) |
 | `slash_command` | string | Commande lancée — `{key}` est remplacé par la clé ticket |
 | `claude_timeout_seconds` | int | Timeout par run `/mike` en secondes (défaut : 3600) |
-| `max_issues_per_run` | int | Plafond de tickets traités par cycle (défaut : 10) |
+| `max_issues_per_run` | int | Plafond de tickets traités par cycle (défaut : 4) |
 
 Modifier `k8s/configmap.yaml` pour ajuster les projets ou le plafond, puis redéployer.
+
+> ⚠️ **Cadence des cycles.** `concurrencyPolicy: Forbid` empêche le recouvrement et
+> chaque `/mike` (cycle complet) peut durer jusqu'à `claude_timeout_seconds`. Un batch
+> plein peut donc espacer les cycles bien au-delà de 15 min. Garder `max_issues_per_run`
+> bas. **Si vous changez `max_issues_per_run` ou `claude_timeout_seconds`, mettez à jour
+> `activeDeadlineSeconds` dans `k8s/cronjob.yaml`** (= `max_issues_per_run × claude_timeout_seconds + marge`).
 
 ---
 
@@ -78,11 +84,19 @@ Les credentials OAuth (`claude-credentials.json`) sont stockés dans
    rm /tmp/claude-credentials.json
    ```
 
-### Indicateur d'expiration
+### Indicateur d'expiration (et sa limite)
 
-Quand les credentials expirent, le watcher retourne un code de sortie ≠ 0 avec un log
-explicite `Erreur d'infrastructure`. ArgoCD / votre système d'alerte doit surveiller les
-jobs en échec dans le namespace `jira-watcher`.
+Au démarrage, le watcher fait un **pré-contrôle léger** : si `~/.claude/.credentials.json`
+est **absent ou vide**, il sort en code ≠ 0 avec un log explicite (pas d'appel réseau).
+
+⚠️ **Limite connue** : un token **présent mais expiré** n'est pas détecté par ce pré-contrôle.
+Il ne se révèle que lorsqu'un `/mike` tourne réellement et échoue (code ≠ 0). **S'il n'y a
+aucun ticket éligible** sur le cycle, une expiration peut donc passer inaperçue jusqu'au
+prochain ticket. Surveiller les jobs en échec du namespace `jira-watcher` (ArgoCD / alerting),
+et renouveler les credentials périodiquement (cf. §3) sans attendre une panne.
+
+Les échecs d'infrastructure JIRA (auth/permission sur le claim) remontent aussi en code ≠ 0
+(`infra_failed > 0` dans le `RunReport`).
 
 ---
 
@@ -130,6 +144,13 @@ kubectl apply -f deploy/jira-watcher/k8s/application.yaml
 kubectl apply --dry-run=client -k deploy/jira-watcher/k8s
 # ou
 kustomize build deploy/jira-watcher/k8s | kubectl apply --dry-run=client -f -
+```
+
+`application.yaml` est exclu de la kustomization (il dépend du CRD ArgoCD). Le valider
+séparément :
+
+```bash
+kubectl apply --dry-run=client -f deploy/jira-watcher/k8s/application.yaml
 ```
 
 ---

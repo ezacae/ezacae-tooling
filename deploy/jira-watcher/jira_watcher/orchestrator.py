@@ -18,22 +18,26 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from jira_watcher.config import WatcherConfig
-from jira_watcher.jira_client import JiraClient
+from jira_watcher.jira_client import JiraClient, JiraHttpError
 from jira_watcher.jql import build_jql
-from jira_watcher.mike_runner import MikeResult, RunnerCallable, run as mike_run
+from jira_watcher.mike_runner import MikeResult
 
 logger = logging.getLogger(__name__)
+
+# Marge demandée au-delà de max_issues_per_run pour détecter les tickets ignorés.
+_LOOKAHEAD = 50
 
 
 @dataclass
 class RunReport:
     """Rapport de fin de cycle du watcher."""
 
-    seen: int         # nombre de tickets éligibles trouvés
-    processed: int    # nombre de tickets effectivement traités (≤ max_issues_per_run)
-    ok: int           # runs /mike ayant réussi
-    failed: int       # runs /mike ayant échoué ou timeout
-    skipped: int      # tickets non traités car plafond atteint
+    seen: int          # nombre de tickets éligibles trouvés
+    processed: int     # nombre de tickets effectivement traités (≤ max_issues_per_run)
+    ok: int            # runs /mike ayant réussi
+    failed: int        # runs /mike ayant échoué ou timeout (échec fonctionnel)
+    skipped: int       # tickets non traités car plafond atteint
+    infra_failed: int = 0  # échecs d'infrastructure (claim JIRA / auth / réseau)
     errors: list[str] = field(default_factory=list)  # messages d'erreur détaillés
 
     def to_dict(self) -> dict[str, Any]:
@@ -43,6 +47,7 @@ class RunReport:
             "ok": self.ok,
             "failed": self.failed,
             "skipped": self.skipped,
+            "infra_failed": self.infra_failed,
             "errors": self.errors,
         }
 
@@ -63,8 +68,8 @@ def process(
         RunReport résumant le cycle.
     """
     jql = build_jql(config)
-    # On demande le maximum pour pouvoir calculer skipped
-    keys = client.search_keys(jql, max_results=config.max_issues_per_run + 50)
+    # On demande un peu plus que le plafond pour pouvoir calculer skipped.
+    keys = client.search_keys(jql, max_results=config.max_issues_per_run + _LOOKAHEAD)
 
     seen = len(keys)
     to_process = keys[: config.max_issues_per_run]
@@ -79,17 +84,21 @@ def process(
 
     ok = 0
     failed = 0
+    infra_failed = 0
     errors: list[str] = []
 
     for key in to_process:
-        # 1. Poser le claim AVANT le run (déduplication)
+        # 1. Poser le claim AVANT le run (déduplication).
+        #    Un échec ici est une erreur d'INFRASTRUCTURE (auth/permission/réseau
+        #    JIRA), distincte d'un échec fonctionnel de /mike : on ne lance pas
+        #    le run et on le comptabilise comme infra_failed (→ code de sortie ≠ 0).
         try:
             client.add_label(key, config.claim_label)
-        except Exception as exc:
+        except JiraHttpError as exc:
             msg = f"[{key}] Impossible de poser le label de claim : {exc}"
             logger.error(msg)
             errors.append(msg)
-            failed += 1
+            infra_failed += 1
             continue
 
         # 2. Lancer /mike via le runner injecté
@@ -115,5 +124,6 @@ def process(
         ok=ok,
         failed=failed,
         skipped=skipped,
+        infra_failed=infra_failed,
         errors=errors,
     )

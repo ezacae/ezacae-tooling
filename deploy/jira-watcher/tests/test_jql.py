@@ -1,24 +1,6 @@
 """Tests pour jira_watcher.jql — construction de la requête JQL."""
-import pytest
-from jira_watcher.config import WatcherConfig
 from jira_watcher.jql import build_jql
-
-
-def make_config(**overrides) -> WatcherConfig:
-    defaults = {
-        "jira_base_url": "https://ezacae.atlassian.net",
-        "projects": ["CRM"],
-        "trigger_label": "claude",
-        "claim_label": "claude-traite",
-        "watched_statuses": ["NOUVEAU"],
-        "slash_command": "/mike {key}",
-        "claude_timeout_seconds": 3600,
-        "max_issues_per_run": 10,
-    }
-    from jira_watcher.config import load_config
-
-    defaults.update(overrides)
-    return load_config(defaults)
+from tests.factories import make_config
 
 
 class TestBuildJql:
@@ -66,6 +48,20 @@ class TestBuildJql:
         config = make_config(watched_statuses=["EN COURS"])
         jql = build_jql(config)
         assert '"EN COURS"' in jql
+
+    def test_valeur_avec_guillemet_echappee(self):
+        """Un guillemet dans une valeur doit être échappé (anti-casse de requête)."""
+        config = make_config(watched_statuses=['EN "ATTENTE"'])
+        jql = build_jql(config)
+        # Le guillemet interne est précédé d'un backslash, les guillemets
+        # délimiteurs restent présents.
+        assert r'"EN \"ATTENTE\""' in jql
+
+    def test_valeur_avec_backslash_echappee(self):
+        """Un backslash dans une valeur doit être doublé."""
+        config = make_config(projects=[r"A\B"])
+        jql = build_jql(config)
+        assert r'"A\\B"' in jql
 
     def test_structure_complete(self):
         """Vérifie l'ordre des clauses dans la requête complète."""

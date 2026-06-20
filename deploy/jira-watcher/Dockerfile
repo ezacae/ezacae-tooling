@@ -51,10 +51,9 @@ RUN chown -R claude:claude /home/claude
 USER claude
 WORKDIR /home/claude
 
-# Le répertoire de credentials est monté en runtime par le Secret k8s.
-# mkdir ici assure que le montage volumeMount fonctionne même si le Secret
-# est absent (le process échouera proprement avec un log d'erreur).
-RUN mkdir -p /home/claude/.claude
+# Les credentials (~/.claude/.credentials.json) sont montés en runtime par le
+# Secret k8s. Le répertoire ~/.claude existe déjà (créé plus haut). Si le Secret
+# est absent, le pré-contrôle du watcher échoue proprement avec un log d'erreur.
 
 ENTRYPOINT ["python", "-m", "jira_watcher"]
 CMD []

@@ -4,28 +4,12 @@ Tout est injecté (client, runner) : aucun réseau ni subprocess réel.
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
-import pytest
-
-from jira_watcher.config import WatcherConfig, load_config
+from jira_watcher.jira_client import JiraHttpError
 from jira_watcher.mike_runner import MikeResult
 from jira_watcher.orchestrator import RunReport, process
-
-
-def make_config(**overrides) -> WatcherConfig:
-    defaults = {
-        "jira_base_url": "https://ezacae.atlassian.net",
-        "projects": ["CRM"],
-        "trigger_label": "claude",
-        "claim_label": "claude-traite",
-        "watched_statuses": ["NOUVEAU"],
-        "slash_command": "/mike {key}",
-        "claude_timeout_seconds": 3600,
-        "max_issues_per_run": 10,
-    }
-    defaults.update(overrides)
-    return load_config(defaults)
+from tests.factories import make_config
 
 
 def make_client(keys: list[str], add_label_raises=None) -> MagicMock:
@@ -57,6 +41,7 @@ class TestRunReport:
         assert d["ok"] == 1
         assert d["failed"] == 1
         assert d["skipped"] == 1
+        assert d["infra_failed"] == 0
 
 
 class TestProcessHappyPath:
@@ -146,6 +131,33 @@ class TestProcessEchec:
         assert report.failed == 1
 
 
+class TestProcessInfra:
+    def test_claim_echoue_compte_infra_failed_et_ne_lance_pas_run(self):
+        """Un échec de claim (JiraHttpError) = erreur d'infra, pas un échec /mike."""
+        config = make_config()
+        client = make_client(
+            ["CRM-1"], add_label_raises=JiraHttpError("403 Forbidden")
+        )
+        runner = make_runner("OK")
+
+        report = process(client, config, runner)
+
+        assert report.infra_failed == 1
+        assert report.failed == 0
+        assert report.ok == 0
+        runner.assert_not_called()  # le run /mike n'est pas tenté
+
+    def test_claim_echoue_ne_leve_pas_exception(self):
+        config = make_config()
+        client = make_client(
+            ["CRM-1"], add_label_raises=JiraHttpError("401 Unauthorized")
+        )
+        runner = make_runner("OK")
+
+        report = process(client, config, runner)  # ne doit pas lever
+        assert report is not None
+
+
 class TestProcessPlafond:
     def test_plafond_max_issues_respecte(self):
         config = make_config(max_issues_per_run=2)
@@ -175,12 +187,96 @@ class TestMainDryRun:
 
     def test_dry_run_liste_cles_sans_claim(self):
         """En mode dry-run, aucun label ne doit être posé, aucun runner appelé."""
-        from jira_watcher.__main__ import run_dry_run
+        from jira_watcher.__main__ import fetch_eligible_keys
 
         config = make_config()
         client = make_client(["CRM-1", "CRM-2"])
 
-        keys = run_dry_run(client, config)
+        keys = fetch_eligible_keys(client, config)
 
         client.add_label.assert_not_called()
         assert keys == ["CRM-1", "CRM-2"]
+
+
+class TestClaudeCredentials:
+    """Pré-contrôle des credentials Claude (#7)."""
+
+    def test_fichier_absent_retourne_false(self, tmp_path):
+        from jira_watcher.__main__ import claude_credentials_ok
+
+        assert claude_credentials_ok(tmp_path / "absent.json") is False
+
+    def test_fichier_vide_retourne_false(self, tmp_path):
+        from jira_watcher.__main__ import claude_credentials_ok
+
+        p = tmp_path / ".credentials.json"
+        p.write_text("")
+        assert claude_credentials_ok(p) is False
+
+    def test_fichier_non_vide_retourne_true(self, tmp_path):
+        from jira_watcher.__main__ import claude_credentials_ok
+
+        p = tmp_path / ".credentials.json"
+        p.write_text("{\"token\": \"x\"}")
+        assert claude_credentials_ok(p) is True
+
+
+class TestMainExitCode:
+    """Code de sortie de main() (#7, #8)."""
+
+    def _write_config(self, tmp_path):
+        cfg = tmp_path / "config.yaml"
+        cfg.write_text(
+            "jira_base_url: https://ezacae.atlassian.net\n"
+            "projects: [CRM]\n"
+            "trigger_label: claude\n"
+            "claim_label: claude-traite\n"
+            "watched_statuses: [NOUVEAU]\n"
+            'slash_command: "/mike {key}"\n'
+            "claude_timeout_seconds: 3600\n"
+            "max_issues_per_run: 4\n"
+        )
+        return cfg
+
+    def test_credentials_absents_retourne_1(self, tmp_path, monkeypatch):
+        import jira_watcher.__main__ as m
+
+        cfg = self._write_config(tmp_path)
+        monkeypatch.setenv("JIRA_EMAIL", "user@e.com")
+        monkeypatch.setenv("JIRA_API_TOKEN", "tok")
+        # credentials Claude réputés absents
+        monkeypatch.setattr(m, "claude_credentials_ok", lambda path: False)
+
+        assert m.main(["--config", str(cfg)]) == 1
+
+    def test_infra_failed_retourne_1(self, tmp_path, monkeypatch):
+        import jira_watcher.__main__ as m
+
+        cfg = self._write_config(tmp_path)
+        monkeypatch.setenv("JIRA_EMAIL", "user@e.com")
+        monkeypatch.setenv("JIRA_API_TOKEN", "tok")
+        monkeypatch.setattr(m, "claude_credentials_ok", lambda path: True)
+        monkeypatch.setattr(
+            m, "process",
+            lambda client, config, runner: RunReport(
+                seen=1, processed=1, ok=0, failed=0, skipped=0, infra_failed=1
+            ),
+        )
+
+        assert m.main(["--config", str(cfg)]) == 1
+
+    def test_cycle_ok_retourne_0(self, tmp_path, monkeypatch):
+        import jira_watcher.__main__ as m
+
+        cfg = self._write_config(tmp_path)
+        monkeypatch.setenv("JIRA_EMAIL", "user@e.com")
+        monkeypatch.setenv("JIRA_API_TOKEN", "tok")
+        monkeypatch.setattr(m, "claude_credentials_ok", lambda path: True)
+        monkeypatch.setattr(
+            m, "process",
+            lambda client, config, runner: RunReport(
+                seen=1, processed=1, ok=1, failed=0, skipped=0, infra_failed=0
+            ),
+        )
+
+        assert m.main(["--config", str(cfg)]) == 0

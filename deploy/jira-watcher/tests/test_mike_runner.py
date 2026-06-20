@@ -5,28 +5,10 @@ subprocess est injecté via un runner fake pour éviter toute exécution réelle
 from __future__ import annotations
 
 import subprocess
-from typing import Any
 from unittest.mock import MagicMock
 
-import pytest
-
-from jira_watcher.config import WatcherConfig, load_config
 from jira_watcher.mike_runner import MikeResult, build_invocation, run
-
-
-def make_config(**overrides) -> WatcherConfig:
-    defaults = {
-        "jira_base_url": "https://ezacae.atlassian.net",
-        "projects": ["CRM"],
-        "trigger_label": "claude",
-        "claim_label": "claude-traite",
-        "watched_statuses": ["NOUVEAU"],
-        "slash_command": "/mike {key}",
-        "claude_timeout_seconds": 3600,
-        "max_issues_per_run": 10,
-    }
-    defaults.update(overrides)
-    return load_config(defaults)
+from tests.factories import make_config
 
 
 class TestBuildInvocation:
