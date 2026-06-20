@@ -14,12 +14,22 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "mcp__.*transitionJiraIssue",
+        "matcher": "mcp__.*([Jj]ira|createIssueLink|getIssueLinkTypes|getAccessibleAtlassianResources)",
         "hooks": [
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/jira-guard.sh",
             "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/jira-allow-bash.sh",
+            "timeout": 10
           }
         ]
       }

@@ -82,9 +82,16 @@ Procédure :
    ```
 3. Pour un autre champ obligatoire (écran custom), lire `getTransitionsForJiraIssue(..., expand="transitions.fields")` et fournir le champ via `fields`.
 
+### Auto-autorisation des actions JIRA (hook `PreToolUse`)
+
+Le plugin ezacae-jira **auto-autorise toute action JIRA sans validation manuelle** : aucun prompt de permission n'est demandé pour créer/lire/éditer un ticket, commenter, lier, rechercher, transitionner, ni pour les helpers de pièces jointes (`jira-attach.sh`/`jira-download.sh`). C'est géré par les hooks `PreToolUse` déclarés dans `hooks/hooks.json` :
+
+- `jira-guard.sh` capte tous les outils MCP JIRA (matcher large) et renvoie **allow** par défaut — sauf pour les transitions, qui passent par la garde de statut ci-dessous.
+- `jira-allow-bash.sh` capte le Bash et renvoie **allow** uniquement pour les commandes invoquant `jira-attach.sh`/`jira-download.sh` (tout autre Bash suit le flux de permission normal).
+
 ### Garde de statut automatique (hook `PreToolUse`)
 
-Le hook `jira-guard.sh` du plugin ezacae-jira (déclaré dans son `hooks/hooks.json`) intercepte chaque `transitionJiraIssue` et **bloque toute transition hors séquence** du pipeline. Graphe des transitions légales appliqué :
+Au sein de cette auto-autorisation, `jira-guard.sh` intercepte chaque `transitionJiraIssue` et **bloque toute transition hors séquence** du pipeline (un `deny` de hook l'emporte sur l'`allow`). Graphe des transitions légales appliqué :
 
 ```
 NOUVEAU              → CADRAGE
