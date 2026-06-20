@@ -1,0 +1,106 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: jira-watcher
+  namespace: jira-watcher
+  labels:
+    app.kubernetes.io/name: jira-watcher
+    app.kubernetes.io/component: cronjob
+spec:
+  # Toutes les 15 minutes
+  schedule: "*/15 * * * *"
+
+  # Empêche le recouvrement de runs (un cycle /mike peut durer jusqu'à 60 min)
+  concurrencyPolicy: Forbid
+
+  # Pas de tentative de reprise automatique (logs → alerte manuelle)
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      # Pas de retry automatique — la déduplication par étiquette protège
+      backoffLimit: 0
+
+      # Timeout global : max_issues_per_run × claude_timeout_seconds + marge.
+      # = 4 × 3600 s + 600 s = 15000 s (~4,2 h, pire cas).
+      # ⚠️ SYNCHRONISER avec configmap.yaml (max_issues_per_run, claude_timeout_seconds).
+      # Un batch plein peut, avec concurrencyPolicy: Forbid, espacer les cycles
+      # bien au-delà de 15 min : garder max_issues_per_run bas (cf. README).
+      activeDeadlineSeconds: 15000
+
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: jira-watcher
+        spec:
+          restartPolicy: Never
+
+          serviceAccountName: jira-watcher
+
+          # Conteneur non-root sans privilèges
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+
+          containers:
+            - name: jira-watcher
+              image: registry.gitlab.com/ezacae/ezacae-claude-tooling/jira-watcher:latest
+              imagePullPolicy: Always
+
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop: ["ALL"]
+
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+
+              # Variables d'environnement depuis le Secret
+              env:
+                - name: JIRA_EMAIL
+                  valueFrom:
+                    secretKeyRef:
+                      name: jira-watcher-secrets
+                      key: jira-email
+                - name: JIRA_API_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: jira-watcher-secrets
+                      key: jira-api-token
+
+              # Montages de volumes
+              volumeMounts:
+                # ConfigMap montée en fichier
+                - name: config
+                  mountPath: /etc/jira-watcher
+                  readOnly: true
+                # Credentials Claude + MCP Atlassian (OAuth)
+                - name: claude-credentials
+                  mountPath: /home/claude/.claude/.credentials.json
+                  subPath: claude-credentials.json
+                  readOnly: true
+
+          volumes:
+            - name: config
+              configMap:
+                name: jira-watcher-config
+
+            - name: claude-credentials
+              secret:
+                secretName: jira-watcher-secrets
+                items:
+                  - key: claude-credentials.json
+                    path: claude-credentials.json
+                # 0640 : le propriétaire (root) écrit, le groupe fsGroup (1000)
+                # lit. Le process tourne en runAsUser 1000 / fsGroup 1000 ; en
+                # 0600 le groupe n'aurait aucun droit → credentials illisibles.
+                defaultMode: 0640

@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jira-watcher
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: jira-watcher
+    app.kubernetes.io/managed-by: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: "git@gitlab.com:ezacae/ezacae-claude-tooling.git"
+    targetRevision: HEAD
+    path: deploy/jira-watcher/k8s
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jira-watcher
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+  # Exclure application.yaml lui-même du sync
+  # (le CRD Application nécessite ArgoCD installé — pas en dry-run kubectl standard)
+  ignoreDifferences: []

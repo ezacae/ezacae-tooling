@@ -1,0 +1,12 @@
+__pycache__/
+*.egg-info/
+*.pyc
+.pytest_cache/
+.venv/
+
+# Filet anti-fuite : ne jamais committer de credentials réels.
+# Le gabarit secret.example.yaml reste suivi.
+*.credentials.json
+secret.yaml
+secret.*.yaml
+!secret.example.yaml

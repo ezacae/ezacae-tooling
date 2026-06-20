@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jira-watcher-config
+  namespace: jira-watcher
+  labels:
+    app.kubernetes.io/name: jira-watcher
+    app.kubernetes.io/component: config
+data:
+  config.yaml: |
+    # URL de base de l'instance JIRA Cloud
+    jira_base_url: "https://ezacae.atlassian.net"
+
+    # Clés de projets JIRA surveillés
+    projects:
+      - "CRM"
+      - "ACME"
+
+    # Étiquette d'éligibilité : le ticket doit la porter pour être traité
+    trigger_label: "claude"
+
+    # Étiquette de claim : posée AVANT le lancement de /mike (déduplication)
+    # Retrait manuel requis pour relancer un ticket en échec
+    claim_label: "claude-traite"
+
+    # Statuts déclencheurs. JIRA résout les noms de statut sans tenir compte de
+    # la casse, mais le libellé doit correspondre exactement à celui de l'instance.
+    watched_statuses:
+      - "NOUVEAU"
+
+    # Commande lancée pour chaque ticket — {key} est remplacé par la clé réelle
+    slash_command: "/mike {key}"
+
+    # Timeout par run /mike en secondes (cycle complet peut prendre jusqu'à 60 min)
+    claude_timeout_seconds: 3600
+
+    # Nombre maximum de tickets traités par cycle (garde-fou).
+    # Volontairement bas : chaque /mike peut durer longtemps et concurrencyPolicy
+    # est Forbid. ⚠️ Si modifié, mettre à jour activeDeadlineSeconds dans cronjob.yaml.
+    max_issues_per_run: 4
