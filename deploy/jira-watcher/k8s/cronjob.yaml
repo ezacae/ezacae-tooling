@@ -47,7 +47,7 @@ spec:
 
           containers:
             - name: jira-watcher
-              image: registry.gitlab.com/ezacae/ezacae-claude-tooling/jira-watcher:latest
+              image: registry.gitlab.com/ezacae/ezacae-claude-tooling/jira-watcher/master:latest
               imagePullPolicy: Always
 
               securityContext:
