@@ -1,9 +1,9 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "ezacae-tooling",
+  "name": "ezacae-claude-tooling",
   "description": "Marketplace interne ezacae — plugins Claude Code pour le conseil et le développement low-code / vibe coding.",
   "owner": {
-    "name": "ezacae",
+    "name": "Simon - ezacae",
     "email": "simon@ezacae.com"
   },
   "plugins": [
