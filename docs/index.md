@@ -1,4 +1,4 @@
-# ezacae-tooling
+# ezacae-claude-tooling
 
 > Marketplace de plugins Claude Code · usage interne — `v0.1.0`
 
@@ -14,10 +14,10 @@ Le marketplace qui packe les commandes, skills et agents ezacae — **Mike**, **
 
 ```text
 /plugin marketplace add git@gitlab.com:ezacae/ezacae-claude-tooling.git
-/plugin install ezacae-base@ezacae-tooling
-/plugin install ezacae-jira@ezacae-tooling
-/plugin install ezacae-doc@ezacae-tooling
-/plugin install ezacae-dev@ezacae-tooling
+/plugin install ezacae-base@ezacae-claude-tooling
+/plugin install ezacae-jira@ezacae-claude-tooling
+/plugin install ezacae-doc@ezacae-claude-tooling
+/plugin install ezacae-dev@ezacae-claude-tooling
 ```
 
 ## 02 · Catalogue — ce que chaque plugin apporte

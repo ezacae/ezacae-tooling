@@ -24,9 +24,9 @@ En local (pendant la phase de rodage) :
 
 ```
 /plugin marketplace add ~/DEV/ezacae-claude-tooling
-/plugin install ezacae-jira@ezacae-tooling
-/plugin install ezacae-doc@ezacae-tooling
-/plugin install ezacae-dev@ezacae-tooling
+/plugin install ezacae-jira@ezacae-claude-tooling
+/plugin install ezacae-doc@ezacae-claude-tooling
+/plugin install ezacae-dev@ezacae-claude-tooling
 ```
 
 Plus tard, depuis GitLab (après `git push`) :
@@ -151,8 +151,8 @@ Si tout passe → supprimer la sauvegarde `~/.claude.bak-*` quand tu es serein.
 En cas de souci :
 
 ```bash
-/plugin uninstall ezacae-dev@ezacae-tooling
-/plugin uninstall ezacae-doc@ezacae-tooling
-/plugin uninstall ezacae-jira@ezacae-tooling
+/plugin uninstall ezacae-dev@ezacae-claude-tooling
+/plugin uninstall ezacae-doc@ezacae-claude-tooling
+/plugin uninstall ezacae-jira@ezacae-claude-tooling
 rm -rf ~/.claude && mv ~/.claude.bak-AAAAMMJJ ~/.claude
 ```

@@ -25,20 +25,20 @@ Marketplace interne ezacae de plugins Claude Code.
 
 ```
 /plugin marketplace add <URL_GITLAB>/ezacae-claude-tooling
-/plugin install ezacae-base@ezacae-tooling
-/plugin install ezacae-jira@ezacae-tooling
-/plugin install ezacae-doc@ezacae-tooling
-/plugin install ezacae-dev@ezacae-tooling
+/plugin install ezacae-base@ezacae-claude-tooling
+/plugin install ezacae-jira@ezacae-claude-tooling
+/plugin install ezacae-doc@ezacae-claude-tooling
+/plugin install ezacae-dev@ezacae-claude-tooling
 ```
 
 Pendant le développement, en local :
 
 ```
 /plugin marketplace add ~/DEV/ezacae-claude-tooling
-/plugin install ezacae-base@ezacae-tooling
-/plugin install ezacae-jira@ezacae-tooling
-/plugin install ezacae-doc@ezacae-tooling
-/plugin install ezacae-dev@ezacae-tooling
+/plugin install ezacae-base@ezacae-claude-tooling
+/plugin install ezacae-jira@ezacae-claude-tooling
+/plugin install ezacae-doc@ezacae-claude-tooling
+/plugin install ezacae-dev@ezacae-claude-tooling
 ```
 
 ## Modèle infra vs état projet

@@ -324,7 +324,7 @@ empaquetée en image headless Claude Code, déclenchée par CronJob, déployée 
 
 #### Tâche 6.1 : config Claude bakée (marketplace + plugins)
 **Fichiers :** Créer `deploy/jira-watcher/image/claude-config.json`
-- [ ] Déclarer le marketplace `ezacae-tooling` (source = copie locale `/opt/ezacae-tooling`) + plugins activés `ezacae-base`, `ezacae-jira`, `ezacae-doc` + serveur MCP `claude.ai Atlassian`
+- [ ] Déclarer le marketplace `ezacae-claude-tooling` (source = copie locale `/opt/ezacae-tooling`) + plugins activés `ezacae-base`, `ezacae-jira`, `ezacae-doc` + serveur MCP `claude.ai Atlassian`
 - [ ] Commit
 
 #### Tâche 6.2 : Dockerfile + .dockerignore

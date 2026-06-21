@@ -56,5 +56,5 @@ Chaque document porte un statut dans son en-tête :
 ## Outillage
 
 Les commandes, skills et agents ezacae sont fournis par les plugins du marketplace
-`ezacae-tooling` : `ezacae-jira` (infra pipeline JIRA), `ezacae-doc` (Mike + doc),
+`ezacae-claude-tooling` : `ezacae-jira` (infra pipeline JIRA), `ezacae-doc` (Mike + doc),
 `ezacae-dev` (Sarah + conception/implémentation). Ne pas redéfinir ces outils localement.

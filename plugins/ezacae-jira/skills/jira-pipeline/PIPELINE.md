@@ -185,7 +185,7 @@ Les agents pilotent JIRA via des **helpers shell** (API REST v3) **auto-autorisÃ
 
 ## Fichiers du pipeline
 
-> Tous les fichiers ci-dessous vivent dans les **plugins** du marketplace `ezacae-tooling`, plus dans le `.claude/` du projet courant (credentials).
+> Tous les fichiers ci-dessous vivent dans les **plugins** du marketplace `ezacae-claude-tooling`, plus dans le `.claude/` du projet courant (credentials).
 
 | Fichier | Plugin | RÃ´le |
 |---------|--------|------|
