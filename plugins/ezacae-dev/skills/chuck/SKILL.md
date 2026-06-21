@@ -237,10 +237,18 @@ Corriger directement. Pas de re-review.
 > "Conception écrite dans `docs/<nom>.md`. Revois le document et dis-moi si tu veux des modifications avant l'implémentation."
 
 - Si modifications → appliquer et re-présenter
-- Une fois validé, émettre la **ligne de passation** standard (captée par l'orchestrateur `/sarah`, ou lue par l'utilisateur) :
+- Une fois validé, **commiter et pousser** `docs/<nom>.md` (et sa maquette éventuelle) : c'est la précondition pour que morgan, dont le worktree est créé fresh depuis `origin/main`, voie le document. Sans cela, morgan s'arrêtera en signalant le fichier absent.
+
+```bash
+git add docs/<nom>.md docs/<nom>.mockup.html  # maquette si présente
+git commit -m "docs(conception): <sujet>"
+git push
+```
+
+- Puis émettre la **ligne de passation** standard (captée par l'orchestrateur `/sarah`, ou lue par l'utilisateur) :
 
 ```
-✅ Conception validée : docs/<nom>.md — type: feature|bug — titre: <H1>
+✅ Conception validée et poussée : docs/<nom>.md — type: feature|bug — titre: <H1>
    Exécution : /morgan docs/<nom>.md  (autonome)  ou  skill john  (interactif)
 ```
 

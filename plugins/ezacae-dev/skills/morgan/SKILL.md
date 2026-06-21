@@ -95,7 +95,9 @@ Agent({
 })
 ```
 
-Le sous-agent lit lui-même le document de conception, le `CLAUDE.md` du projet, ses conventions (`skills/john/SKILL.md`) et la stack détectée — inutile de les inliner ici.
+> ⚠️ **Précondition : le document de conception DOIT être commité et poussé AVANT de déclencher morgan.** Le worktree d'agent (`isolation: "worktree"`) est créé **fresh depuis `origin/main`** : les commits locaux non poussés n'y sont **pas** présents. Morgan se base sur le **fichier** (`<DESIGN_DOC_PATH>`), jamais sur du contenu inliné — donc le `.md` de conception doit déjà exister sur `origin/main`. C'est à l'orchestrateur (Sarah, ou chuck) de **commiter + pousser** la conception avant le dispatch.
+
+Le sous-agent lit le document depuis le disque, le `CLAUDE.md` du projet, ses conventions (`skills/john/SKILL.md`) et la stack détectée — inutile de les inliner.
 
 **Dispatch parallèle** : si plusieurs documents, un Agent `morgan` par document, chacun dans son worktree.
 
@@ -135,10 +137,16 @@ digraph morgan_flow {
 
 ### Phase 0 — Validation de l'environnement
 
-1. Vérifier worktree propre (`git status`)
-2. **Détecter la stack** (procédure du skill `john`) ; en déduire le gestionnaire de paquets / build et les **commandes de vérification** (test, typecheck/analyse, lint, format, build) depuis `skills/john/stacks/<stack>.md`
-3. Vérifier outils disponibles (`git`, `glab` ou `gh`, + la toolchain de la stack)
-4. Résumé en une ligne : stack détectée + conception comprise
+1. **Garde — présence du document de conception.** Vérifier que `<DESIGN_DOC_PATH>` **existe** dans le worktree. S'il est **absent** (cas le plus courant : la conception n'a pas été commitée+poussée et le worktree est fresh depuis `origin/main`), **s'arrêter immédiatement** sans rien implémenter et rendre ce rapport :
+   ```
+   ⛔ Document de conception absent du worktree : <DESIGN_DOC_PATH>
+   → L'orchestrateur (Sarah/chuck) doit le commiter + pousser, puis relancer morgan.
+   ```
+   Ne jamais deviner ni reconstruire la conception de mémoire.
+2. Vérifier worktree propre (`git status`)
+3. **Détecter la stack** (procédure du skill `john`) ; en déduire le gestionnaire de paquets / build et les **commandes de vérification** (test, typecheck/analyse, lint, format, build) depuis `skills/john/stacks/<stack>.md`
+4. Vérifier outils disponibles (`git`, `glab` ou `gh`, + la toolchain de la stack)
+5. Résumé en une ligne : stack détectée + conception comprise
 
 ### Phase 1 — Lecture et compréhension
 
