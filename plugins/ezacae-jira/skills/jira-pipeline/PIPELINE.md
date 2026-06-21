@@ -169,14 +169,17 @@ C'est le **statut courant** du ticket qui détermine où l'on entre dans le pipe
 
 ---
 
-## Pièces jointes (vraies PJ via API REST)
+## Opérations JIRA via helpers REST (pipeline non-interactif)
 
-Le MCP Atlassian ne propose pas d'upload de pièce jointe. Les agents utilisent donc deux helpers shell qui appellent l'API REST JIRA v3 :
+Les agents pilotent JIRA via des **helpers shell** (API REST v3) **auto-autorisés** par le hook `jira-allow-bash.sh` — c'est ce qui rend le pipeline **non-interactif** (aucune validation manuelle) et **fonctionnel en headless/cron** (jira-watcher), là où le MCP distant peut manquer :
 
-- `.claude/scripts/jira-attach.sh <CLE> <fichier...>` — upload (`POST /rest/api/3/issue/{key}/attachments`).
-- `.claude/scripts/jira-download.sh <CLE> <dossier> [filtre]` — récupération des PJ d'un ticket.
+- `jira-get.sh <CLE> [--comments]` — lecture d'un ticket.
+- `jira-comment.sh <CLE> "texte" | -f <fichier>` — commentaire (ADF).
+- `jira-transition.sh <CLE> "<STATUT CIBLE>" [--worklog …] [--comment …]` — transition par nom de statut, **garde de statut intégrée**.
+- `jira-edit.sh <CLE> [--summary|--description|--label|--assignee …]` — édition de champs.
+- `jira-attach.sh <CLE> <fichier...>` / `jira-download.sh <CLE> <dossier> [filtre]` — pièces jointes (le MCP n'offre pas l'upload).
 
-**Prérequis** : variables d'environnement `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` (+ `jq` pour le download). Voir `shared/jira.md`. Tout le reste (création, lecture, édition, commentaires, transitions, recherche) passe par le **MCP Atlassian**.
+**Prérequis** : `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` (+ `jq`). Voir le skill `jira-pipeline` (§1, §4). Restent côté **MCP Atlassian** (repli) : création de ticket, recherche JQL, liste des projets, liens entre tickets.
 
 ---
 
@@ -186,8 +189,13 @@ Le MCP Atlassian ne propose pas d'upload de pièce jointe. Les agents utilisent 
 |---------|------|
 | `.claude/PIPELINE.md` | Ce document. |
 | `.claude/shared/jira.md` | Référentiel JIRA commun (chargé par Mike et Sarah). |
-| `.claude/scripts/jira-attach.sh` | Upload de pièces jointes. |
-| `.claude/scripts/jira-download.sh` | Récupération de pièces jointes. |
+| `scripts/jira-lib.sh` | Bibliothèque partagée (credentials, curl, garde de statut, ADF) — sourcée par les helpers et `jira-guard.sh`. |
+| `scripts/jira-get.sh` | Lecture d'un ticket (+ commentaires). |
+| `scripts/jira-comment.sh` | Ajout de commentaire (ADF). |
+| `scripts/jira-transition.sh` | Transition par nom de statut, garde intégrée. |
+| `scripts/jira-edit.sh` | Édition de champs (résumé, description, labels, assigné). |
+| `scripts/jira-attach.sh` | Upload de pièces jointes. |
+| `scripts/jira-download.sh` | Récupération de pièces jointes. |
 | `.claude/settings.json` | Enregistrement des hooks (SessionStart + PreToolUse). |
 | `.claude/hooks/session-start.sh` | Pré-checks Git + JIRA injectés au démarrage. |
 | `.claude/hooks/jira-guard.sh` | Garde de statut : bloque les transitions hors séquence. |

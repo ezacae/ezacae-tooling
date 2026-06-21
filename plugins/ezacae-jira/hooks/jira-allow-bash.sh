@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Hook PreToolUse(Bash) — auto-autorise les helpers JIRA du plugin ezacae-jira.
 #
-# Les pièces jointes JIRA passent par les scripts REST `jira-attach.sh` /
-# `jira-download.sh` (cf. skill jira-pipeline). Ce hook évite de valider
-# manuellement chaque appel à ces helpers.
+# Toutes les opérations JIRA des agents passent par les helpers REST `jira-*.sh`
+# (cf. skill jira-pipeline) : lecture (jira-get), commentaire (jira-comment),
+# transition (jira-transition, garde intégrée), édition (jira-edit), pièces
+# jointes (jira-attach / jira-download). Ce hook évite de valider manuellement
+# chaque appel à ces helpers — c'est ce qui rend le pipeline non-interactif.
 #
 # Il N'émet une décision QUE pour ces commandes : toute autre commande Bash
 # ressort sans JSON (exit 0), donc le flux de permission normal s'applique —
@@ -17,7 +19,7 @@ INPUT=$(cat)
 CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty')
 
 case "$CMD" in
-  *jira-attach.sh*|*jira-download.sh*)
+  *jira-attach.sh*|*jira-download.sh*|*jira-get.sh*|*jira-comment.sh*|*jira-transition.sh*|*jira-edit.sh*)
     jq -n '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"allow"}}'
     ;;
 esac

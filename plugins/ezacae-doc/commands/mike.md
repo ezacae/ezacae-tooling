@@ -24,30 +24,30 @@ Mike est le **point d'entrée et de sortie documentaire** du pipeline (skill `ji
 ### M-A — Entrée pipeline
 
 1. Charger le skill `jira-pipeline`, obtenir le `cloudId`, vérifier les credentials.
-2. **Si une clé de ticket est fournie (UC2 ou ré-entrée)** : `getJiraIssue` → lire le statut **et les commentaires** du ticket.
+2. **Si une clé de ticket est fournie (UC2 ou ré-entrée)** : `<HELPERS>/jira-get.sh <KEY> --comments` → lire le statut **et les commentaires** du ticket (`<HELPERS>` = chemin injecté par le hook SessionStart, ligne « Helpers JIRA »). Toutes les opérations JIRA (lecture, transition, commentaire, PJ) passent par les helpers `<HELPERS>/jira-*.sh` (auto-autorisés, sans validation manuelle) ; seules la **création** de ticket et la **résolution de projet** restent côté MCP.
    - `NOUVEAU` → dérouler **M-B** (cadrage) en commençant par la transition `NOUVEAU → CADRAGE`.
    - `CADRAGE` → dérouler **M-B** (cadrage) sans re-transitionner (reprise d'un cadrage déjà entamé).
    - `RECETTE INTERNE` → dérouler **M-D** (doc finale).
    - autre → s'arrêter (garde ci-dessus).
-3. **Si aucune clé et demande de fonctionnalité (UC1)** : résoudre le projet (skill `jira-pipeline` §3), `createJiraIssue` au statut `NOUVEAU`, annoncer la clé, puis dérouler **M-B**.
+3. **Si aucune clé et demande de fonctionnalité (UC1)** : résoudre le projet (skill `jira-pipeline` §3), `createJiraIssue` (MCP) au statut `NOUVEAU`, annoncer la clé, puis dérouler **M-B**.
 
 ### M-B — Cadrage (statut `NOUVEAU` ou `CADRAGE`)
 
-1. **Marquer le début du cadrage** : si le ticket est au statut `NOUVEAU`, transitionner aussitôt `NOUVEAU → CADRAGE` (procédure skill `jira-pipeline` §5) **avant tout autre travail** — le ticket signale ainsi qu'un cadrage est en cours. S'il est déjà au statut `CADRAGE` (ré-entrée), ne pas re-transitionner.
+1. **Marquer le début du cadrage** : si le ticket est au statut `NOUVEAU`, transitionner aussitôt avec `<HELPERS>/jira-transition.sh <KEY> "CADRAGE"` **avant tout autre travail** — le ticket signale ainsi qu'un cadrage est en cours. S'il est déjà au statut `CADRAGE` (ré-entrée), ne pas re-transitionner.
 2. **Prendre en compte les commentaires du ticket** : relire les commentaires JIRA (récupérés en M-A) et en tenir compte dans le cadrage — précisions, contraintes, arbitrages ou demandes ajoutés par un humain ou un agent précédent. Les intégrer à la fiche de cadrage et signaler explicitement tout commentaire qui complète ou contredit la demande initiale.
 3. Dérouler le travail documentaire habituel (Phases 0 à 5 ci-dessous) : audit, routage Mike-PO / Mike-CTO, mise à jour de la doc.
 4. Produire une **fiche de cadrage fonctionnel** (`docs/<projet>/cadrage-<sujet>.md`) — le « fichier de résultat » qui servira d'entrée à Sarah/chuck : objectif, périmètre, personas impactés, processus concernés, contraintes connues. Pas de détail d'implémentation (ça reste le travail de chuck).
-5. Attacher au ticket : `<HELPERS>/jira-attach.sh <KEY> <fiche + docs mises à jour>` (`<HELPERS>` = chemin injecté par le hook SessionStart, ligne « Helpers JIRA »).
-6. **Transition `CADRAGE → CONCEPTION`** (procédure skill `jira-pipeline` §5) + commentaire de passation (§8).
+5. Attacher au ticket : `<HELPERS>/jira-attach.sh <KEY> <fiche + docs mises à jour>`.
+6. **Transition `CADRAGE → CONCEPTION`** + commentaire de passation (§8) en un appel : `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION" --comment "<passation>"`.
 7. **Passer la main à Sarah** : invoquer `/sarah <KEY>` dans le thread principal.
 
 ### M-D — Doc finale (statut `RECETTE INTERNE`)
 
 Sarah a rendu la main après la revue de code.
 
-1. `getJiraIssue` + lire les commentaires/PJ (conception, MR, rapport de revue) pour comprendre ce qui a été livré.
+1. `<HELPERS>/jira-get.sh <KEY> --comments` + `<HELPERS>/jira-download.sh <KEY> /tmp/jira-<KEY>` (conception, MR, rapport de revue) pour comprendre ce qui a été livré.
 2. Mettre à jour la documentation impactée (router Mike-PO / Mike-CTO selon le domaine).
-3. Attacher la doc finale : `<HELPERS>/jira-attach.sh <KEY> <docs>` + commentaire (`<HELPERS>` injecté par le hook SessionStart).
+3. Attacher la doc finale : `<HELPERS>/jira-attach.sh <KEY> <docs>` puis `<HELPERS>/jira-comment.sh <KEY> "<récap doc finale>"`.
 4. **Ne pas transitionner** : le ticket reste `RECETTE INTERNE` pour la recette humaine (la suite — `RECETTE CLIENT`, `TO DEPLOY`, `TERMINÉ(E)` — est hors scope des agents).
 5. Annoncer la fin du pipeline automatisé.
 

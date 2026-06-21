@@ -14,23 +14,23 @@ Quand un argument ressemble à une clé de ticket (`PROJ-123`), Sarah s'exécute
 
 **Règle de garde — Sarah ne démarre que sur le statut `CONCEPTION` :**
 
-1. `getJiraIssue` → lire le statut.
+1. `<HELPERS>/jira-get.sh <KEY> --comments` → lire le statut + le contenu du ticket (`<HELPERS>` = chemin injecté par le hook SessionStart, ligne « Helpers JIRA »).
 2. Si statut ≠ `CONCEPTION` → ⛔ s'arrêter : `Sarah ne démarre que sur CONCEPTION (statut actuel : <X>).`
-3. **Récupérer la fiche de Mike** : `<HELPERS>/jira-download.sh <KEY> /tmp/jira-<KEY>` (`<HELPERS>` = chemin injecté par le hook SessionStart, ligne « Helpers JIRA ») → lire la fiche de cadrage + le contenu du ticket. C'est la **source de vérité** (UC2 : tout part du ticket).
-4. Dérouler le cycle ci-dessous en **synchronisant le statut JIRA à chaque GATE** (table ci-dessous). Chaque transition s'accompagne d'un commentaire de passation (skill `jira-pipeline` §8).
+3. **Récupérer la fiche de Mike** : `<HELPERS>/jira-download.sh <KEY> /tmp/jira-<KEY>` → lire la fiche de cadrage + le contenu du ticket. C'est la **source de vérité** (UC2 : tout part du ticket).
+4. Dérouler le cycle ci-dessous en **synchronisant le statut JIRA à chaque GATE** (table ci-dessous). **Toutes les actions JIRA passent par les helpers `<HELPERS>/jira-*.sh`** (auto-autorisés, donc sans validation manuelle) — pas par le MCP. Chaque transition s'accompagne d'un commentaire de passation (skill `jira-pipeline` §8).
 
 ### Synchronisation statut ↔ phases du cycle
 
 | Phase du cycle | Action JIRA |
 |----------------|-------------|
-| 3.2 — chuck présente le design (GATE) | transition `CONCEPTION → CONCEPTION VALIDATION` |
-| 3.2 — design **validé** par l'utilisateur | `<HELPERS>/jira-attach.sh <KEY> docs/<nom>.md` (+ maquette éventuelle) ; transition `→ CONCEPTION OK` |
-| 3.2 — design **refusé** | rester / revenir à `CONCEPTION` (itérer dans chuck) |
-| 3.3 — lancement morgan/john | **garde** : ne lancer que si statut == `CONCEPTION OK` ; puis transition `→ EN COURS`. Passer la clé du ticket à morgan via ses `INSTRUCTIONS` (préfixer branche/MR par `<KEY>`). |
-| 3.3 — MR créée | lier la MR au ticket (commentaire avec l'URL) ; transition `→ EXAMINER` |
-| 3.4 — revue terminée | poster le rapport de revue (commentaire) |
-| 3.4 — revue **OK** | transition `→ RECETTE INTERNE` puis **invoquer `/mike <KEY>`** (doc finale) |
-| 3.4 — findings **bloquants** | transition `EXAMINER → EN COURS`, corriger (john/morgan), re-reviewer |
+| 3.2 — chuck présente le design (GATE) | `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION VALIDATION"` |
+| 3.2 — design **validé** par l'utilisateur | `<HELPERS>/jira-attach.sh <KEY> docs/<nom>.md` (+ maquette éventuelle) ; `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION OK" --comment "design validé"` |
+| 3.2 — design **refusé** | `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION"` (itérer dans chuck) |
+| 3.3 — lancement morgan/john | **garde** : ne lancer que si statut == `CONCEPTION OK` ; puis `<HELPERS>/jira-transition.sh <KEY> "EN COURS"`. Passer la clé du ticket à morgan via ses `INSTRUCTIONS` (préfixer branche/MR par `<KEY>`). |
+| 3.3 — MR créée | `<HELPERS>/jira-transition.sh <KEY> EXAMINER --comment "MR : <url>"` |
+| 3.4 — revue terminée | `<HELPERS>/jira-comment.sh <KEY> -f <rapport.md>` (poster le rapport de revue) |
+| 3.4 — revue **OK** | `<HELPERS>/jira-transition.sh <KEY> "RECETTE INTERNE"` puis **invoquer `/mike <KEY>`** (doc finale) |
+| 3.4 — findings **bloquants** | `<HELPERS>/jira-transition.sh <KEY> "EN COURS"`, corriger (john/morgan), re-reviewer |
 
 Hors mode pipeline (pas de clé de ticket), Sarah fonctionne comme avant, sans synchronisation JIRA.
 
@@ -138,9 +138,9 @@ But : relire le diff produit avant intégration.
 3. **Synthétiser** les findings en une liste priorisée (bloquant / recommandé / cosmétique).
 
 **En mode pipeline JIRA :**
-- Poster le rapport de revue en **commentaire** du ticket (`addCommentToJiraIssue`).
-- **Findings bloquants** → transition `EXAMINER → EN COURS`, corriger via `john`/`morgan`, puis re-reviewer.
-- **Revue OK** (aucun bloquant restant) → transition `→ RECETTE INTERNE`, puis **invoquer `/mike <KEY>`** pour la mise à jour de la documentation finale (Mike clôt le pipeline).
+- Poster le rapport de revue en **commentaire** du ticket : `<HELPERS>/jira-comment.sh <KEY> -f <rapport.md>`.
+- **Findings bloquants** → `<HELPERS>/jira-transition.sh <KEY> "EN COURS"`, corriger via `john`/`morgan`, puis re-reviewer.
+- **Revue OK** (aucun bloquant restant) → `<HELPERS>/jira-transition.sh <KEY> "RECETTE INTERNE"`, puis **invoquer `/mike <KEY>`** pour la mise à jour de la documentation finale (Mike clôt le pipeline).
 
 → **GATE** : présenter la synthèse. Demander quels findings appliquer. Les corrections passent par `john` ou `morgan` selon l'ampleur.
 

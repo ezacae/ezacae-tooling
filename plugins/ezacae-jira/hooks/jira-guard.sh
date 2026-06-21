@@ -1,26 +1,30 @@
 #!/usr/bin/env bash
-# Hook PreToolUse — porte JIRA du pipeline Mike ⇄ Sarah.
+# Hook PreToolUse — porte JIRA du pipeline Mike ⇄ Sarah (côté outils MCP).
 #
 # Double rôle :
-#   1. AUTO-AUTORISER toute action JIRA (création, lecture, édition, commentaire,
-#      lien, recherche, transition…) sans validation manuelle — c'est le comportement
-#      par défaut pour tout outil JIRA capté par le matcher du hooks.json.
-#   2. GARDER les transitions : bloque une transition JIRA qui ne respecte pas le
-#      graphe de statuts du pipeline. La garde n'agit QUE si :
-#        - l'outil est une transition (transitionJiraIssue),
-#        - les credentials JIRA REST sont présents,
-#        - le ticket est actuellement dans un statut DU pipeline.
-#      Sinon : autorise (les ~38 autres projets / workflows ne sont pas concernés).
+#   1. AUTO-AUTORISER toute action JIRA MCP (création, lecture, édition, commentaire,
+#      lien, recherche, transition…) sans validation manuelle — comportement par
+#      défaut pour tout outil JIRA capté par le matcher du hooks.json.
+#   2. GARDER les transitions : bloque une transitionJiraIssue qui ne respecte pas
+#      le graphe de statuts du pipeline. La garde n'agit QUE si le ticket est dans
+#      un statut DU pipeline et que les credentials REST sont présents.
+#
+# La logique de garde (graphe légal, normalisation, annulation) vit dans
+# scripts/jira-lib.sh — partagée avec jira-transition.sh pour qu'une transition
+# lancée en Bash applique EXACTEMENT le même filet de sécurité que via le MCP.
 #
 # Décision : exit 0 + JSON hookSpecificOutput.permissionDecision (allow|deny).
-# Une décision "deny" d'un hook l'emporte toujours sur un "allow" d'un autre hook,
-# donc la garde de transition reste effective malgré l'auto-autorisation globale.
+# Un "deny" d'un hook l'emporte toujours sur un "allow", donc la garde reste
+# effective malgré l'auto-autorisation globale.
 set -uo pipefail
 
-# Charge <projet>/.claude/jira.env si les credentials ne sont pas déjà exportés.
-# Hook de plugin : CLAUDE_PROJECT_DIR pointe le projet courant, pas le cache du plugin.
-_JIRA_ENV="${CLAUDE_PROJECT_DIR:-$PWD}/.claude/jira.env"
-if [ -z "${JIRA_BASE_URL:-}" ] && [ -f "$_JIRA_ENV" ]; then set -a; . "$_JIRA_ENV"; set +a; fi
+# Source la lib partagée (creds, curl, statut, garde). Sans jq la lib reste
+# inerte ; le repli ci-dessous gère ce cas.
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)/jira-lib.sh"
+jira_load_env
+
+# Le hook dispose d'un budget court : timeout curl réduit.
+export JIRA_CURL_MAX_TIME=6
 
 INPUT=$(cat)
 
@@ -53,57 +57,25 @@ esac
 
 [ -z "$KEY" ] && allow
 
-# Garde inactive si credentials REST absents (cohérent avec les helpers de PJ).
+# Garde inactive si credentials REST absents (cohérent avec les helpers).
 if [ -z "${JIRA_BASE_URL:-}" ] || [ -z "${JIRA_EMAIL:-}" ] || [ -z "${JIRA_API_TOKEN:-}" ]; then
   allow "⚠ Garde de statut inactive : credentials JIRA absents."
 fi
 
-BASE="${JIRA_BASE_URL%/}"
-AUTH="$JIRA_EMAIL:$JIRA_API_TOKEN"
-
-CUR=$(curl --fail --silent --max-time 6 -u "$AUTH" \
-  "$BASE/rest/api/3/issue/$KEY?fields=status" 2>/dev/null \
-  | jq -r '.fields.status.name // empty')
+CUR=$(jira_status "$KEY" 2>/dev/null || true)
 [ -z "$CUR" ] && allow "⚠ Garde : statut courant de $KEY introuvable — transition autorisée par défaut."
 
-# La casse des statuts JIRA est incohérente (Nouveau, CONCEPTION, Recette Interne…).
-# On normalise en majuscules ASCII pour toutes les comparaisons.
-CUR_U=$(printf '%s' "$CUR" | tr '[:lower:]' '[:upper:]')
-
-# Hors périmètre du pipeline → ne pas interférer.
-case "$CUR_U" in
-  NOUVEAU|CADRAGE|CONCEPTION|"CONCEPTION VALIDATION"|"CONCEPTION OK"|"EN COURS"|EXAMINER|"RECETTE INTERNE") ;;
-  *) allow ;;
-esac
-
-# Statut cible de la transition demandée.
+# Statut cible de la transition demandée (résolu depuis son id).
 TARGET=""
 if [ -n "$TRID" ]; then
-  TARGET=$(curl --fail --silent --max-time 6 -u "$AUTH" \
-    "$BASE/rest/api/3/issue/$KEY/transitions" 2>/dev/null \
+  TARGET=$(jira_curl "$(jira_base)/rest/api/3/issue/$KEY/transitions" 2>/dev/null \
     | jq -r --arg id "$TRID" '.transitions[]? | select(.id==$id) | .to.name' | head -n1)
 fi
 [ -z "$TARGET" ] && allow "⚠ Garde : cible de la transition introuvable — autorisée par défaut."
-TARGET_U=$(printf '%s' "$TARGET" | tr '[:lower:]' '[:upper:]')
 
-# L'annulation est une transition globale du workflow — toujours permise.
-case "$TARGET_U" in ANNUL*) allow "✅ Annulation autorisée ($KEY)." ;; esac
-
-# Graphe des transitions légales du pipeline : "SOURCE>CIBLE".
-LEGAL="NOUVEAU>CADRAGE
-CADRAGE>CONCEPTION
-CONCEPTION>CONCEPTION VALIDATION
-CONCEPTION VALIDATION>CONCEPTION
-CONCEPTION VALIDATION>CONCEPTION OK
-CONCEPTION OK>EN COURS
-EN COURS>EXAMINER
-EXAMINER>EN COURS
-EXAMINER>RECETTE INTERNE"
-
-if printf '%s\n' "$LEGAL" | grep -qxF "$CUR_U>$TARGET_U"; then
-  allow "✅ Transition pipeline conforme : $CUR → $TARGET ($KEY)."
+# Décision déléguée à la garde partagée (même graphe que jira-transition.sh).
+if REASON=$(jira_pipeline_guard "$CUR" "$TARGET"); then
+  allow "✅ $REASON ($KEY)"
 else
-  LEGAL_FROM=$(printf '%s\n' "$LEGAL" | grep -F "$CUR_U>" | sed 's/^[^>]*>/→ /' | tr '\n' ' ')
-  [ -z "$LEGAL_FROM" ] && LEGAL_FROM="(aucune — statut terminal du pipeline)"
-  deny "Transition hors pipeline Mike⇄Sarah pour $KEY : '$CUR' → '$TARGET' n'est pas autorisée. Étapes légales depuis '$CUR' : ${LEGAL_FROM}"
+  deny "$REASON"
 fi

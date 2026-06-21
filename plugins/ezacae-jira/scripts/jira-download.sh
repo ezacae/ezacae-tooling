@@ -7,14 +7,10 @@
 # Requiert : JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, jq
 set -euo pipefail
 
-# Charge <projet>/.claude/jira.env si les credentials ne sont pas déjà dans l'environnement.
-# Le script vit dans le plugin (cache), mais le secret reste dans le projet courant.
-_JIRA_ENV="${CLAUDE_PROJECT_DIR:-$PWD}/.claude/jira.env"
-if [ -z "${JIRA_BASE_URL:-}" ] && [ -f "$_JIRA_ENV" ]; then set -a; . "$_JIRA_ENV"; set +a; fi
-
-: "${JIRA_BASE_URL:?JIRA_BASE_URL non défini — voir le skill jira-pipeline}"
-: "${JIRA_EMAIL:?JIRA_EMAIL non défini — voir le skill jira-pipeline}"
-: "${JIRA_API_TOKEN:?JIRA_API_TOKEN non défini — voir le skill jira-pipeline}"
+# Credentials + helpers REST partagés (chargement de .claude/jira.env inclus).
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/jira-lib.sh"
+jira_load_env
+jira_require_creds
 command -v jq >/dev/null 2>&1 || { echo "⛔ jq requis (brew install jq)" >&2; exit 1; }
 
 if [ "$#" -lt 1 ]; then
@@ -25,20 +21,15 @@ fi
 ISSUE="$1"
 DEST="${2:-./jira-${ISSUE}}"
 FILTER="${3:-}"
-BASE="${JIRA_BASE_URL%/}"
 mkdir -p "$DEST"
 
-META=$(curl --fail --silent --show-error \
-  -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  "${BASE}/rest/api/3/issue/${ISSUE}?fields=attachment")
+META=$(jira_curl "$(jira_base)/rest/api/3/issue/${ISSUE}?fields=attachment")
 
 COUNT=0
 while IFS=$'\t' read -r name url; do
   [ -z "$name" ] && continue
   if [ -n "$FILTER" ] && [[ "$name" != *"$FILTER"* ]]; then continue; fi
-  curl --fail --silent --show-error -L \
-    -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-    "$url" -o "${DEST}/${name}"
+  jira_curl -L "$url" -o "${DEST}/${name}"
   echo "↓ ${DEST}/${name}"
   COUNT=$((COUNT + 1))
 done < <(echo "$META" | jq -r '.fields.attachment[]? | "\(.filename)\t\(.content)"')
