@@ -46,11 +46,14 @@ jira_status() {
 
 # $1 = ISSUE-KEY, $2 = STATUT-CIBLE → id de la transition y menant (insensible à
 # la casse, jamais sur le nom de transition). Vide si aucune ne mène à la cible.
+# La comparaison se fait ENTIÈREMENT dans jq (ascii_upcase des deux côtés) : un
+# `tr` côté shell mettrait les caractères accentués en majuscule selon la locale
+# (é→É) alors que `ascii_upcase` les laisse tels quels, d'où un faux négatif sur
+# les statuts accentués (ex. « Annulé »).
 jira_transition_id_for_status() {
-  local target_u; target_u=$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')
   jira_curl "$(jira_base)/rest/api/3/issue/$1/transitions" \
-    | jq -r --arg t "$target_u" \
-      '.transitions[]? | select((.to.name|ascii_upcase)==$t) | .id' | head -n1
+    | jq -r --arg t "$2" \
+      '.transitions[]? | select((.to.name|ascii_upcase)==($t|ascii_upcase)) | .id' | head -n1
 }
 
 # --- Garde de statut du pipeline Mike ⇄ Sarah ---------------------------------
