@@ -37,6 +37,8 @@ Les outils MCP Atlassian prennent un `cloudId`. L'obtenir une fois via `getAcces
 
 1. Lire un éventuel mapping projet dans le `CLAUDE.md` du dépôt (ex. « ce repo → projet JIRA `ACME` »).
 2. Sinon, lister les projets visibles via `getVisibleJiraProjects` et **demander** lequel utiliser. Ne jamais deviner le projet.
+3. **Choisir un type de ticket dont le workflow porte les statuts du pipeline.** Le pipeline n'est exploitable que si le type d'issue suit le workflow `NOUVEAU → CADRAGE → CONCEPTION → … → RECETTE INTERNE`. Tous les types n'y sont pas rattachés : un type « tâche/sous-tâche » utilise souvent un workflow simplifié (`Nouveau → En cours → Terminé`) **sans** `CADRAGE`/`CONCEPTION` — créer le ticket avec un tel type **casse le pipeline dès la 1re transition**. Lire le mapping de type dans le `CLAUDE.md` du dépôt s'il existe ; sinon **demander** le type à utiliser plutôt que de prendre le type par défaut du projet. Vérifier au besoin avec `getJiraProjectIssueTypesMetadata`.
+   > Exemple constaté (projet `CRM`) : le workflow pipeline n'est porté que par les types **`Story`** et **`Bug`** ; le type **`Tâche`** ne l'a pas.
 
 ## 4. Opérations JIRA — helpers REST d'abord, MCP en repli
 
