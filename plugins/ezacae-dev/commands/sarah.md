@@ -43,7 +43,8 @@ Ces pré-vérifications sont exécutées **automatiquement par le hook `SessionS
 | État Git injecté | Action |
 |------------------|--------|
 | à jour | ✅ Continuer |
-| en retard de N commit(s) | `git pull` puis continuer |
+| mis à jour automatiquement (fast-forward) | ✅ Continuer — le hook a déjà fait le fast-forward, ne pas relancer `git pull` |
+| en retard de N commit(s) — fast-forward impossible | `git pull` manuel puis continuer |
 | modifications non commitées | ⛔ Stopper — demander comment traiter |
 | divergence | ⛔ Stopper — résoudre manuellement |
 | en avance de N commit(s) | ⚠️ Signaler — demander confirmation |
@@ -123,7 +124,7 @@ But : implémenter la conception validée, en TDD, jusqu'à la merge request.
 - Invoquer le **skill `morgan docs/<nom>.md`** avec le **chemin** `.md` capté en 3.2. Il crée la branche (dérivée du titre H1), implémente phase par phase en TDD, vérifie avec preuves fraîches, push et ouvre la MR. Pour un bug, le plan suit la structure régression→fix→non-régression définie par chuck.
 - **Si morgan s'arrête en signalant le document de conception absent** (`⛔ Document de conception absent du worktree`) : c'est que le `.md` n'était pas sur `origin/main`. Le **commiter + pousser**, puis **relancer morgan** sur le même chemin. Ne pas lui passer le contenu en repli.
 
-> **Repli git/MR bloqué (sandbox worktree).** Morgan tourne en sous-agent worktree isolé ; le sandbox lui **refuse souvent** `git commit`/`push`/`glab`/`gh`. Dans ce cas Morgan rend un diff vérifié sans pousser. **C'est alors à Sarah (thread principal) de finaliser le git dans le worktree** : créer la branche préfixée par la clé du ticket, **restaurer le bruit de formatage non lié** (`git restore -- . ':(exclude)…'`), stager uniquement les fichiers pertinents, committer, push, puis créer la MR (`glab`/`gh`). Penser à inclure le `.md` de conception dans la branche.
+> **Repli git/MR bloqué (sandbox worktree).** Morgan tourne en sous-agent worktree isolé ; le sandbox lui **refuse souvent** `git commit`/`push`/`glab`/`gh`. Dans ce cas Morgan rend un diff vérifié sans pousser. **C'est alors à Sarah (thread principal) de finaliser le git dans le worktree** : créer la branche préfixée par la clé du ticket, **restaurer le bruit de formatage non lié** (`git restore -- . ':(exclude)…'`), stager uniquement les fichiers pertinents, committer, push, puis créer la MR (`glab`/`gh`). Le `.md` de conception est déjà sur `origin/main` (commité avant le dispatch, cf. pré-requis ci-dessus) et donc déjà présent dans le worktree de morgan — inutile de le rajouter.
 
 > **Working tree partagé entre sessions concurrentes.** Plusieurs sessions peuvent opérer dans le **même dépôt** simultanément. Symptômes de pollution par une autre session : `git checkout main` surgi (visible au reflog), stashes/worktrees `agent-*` étrangers, fichiers d'un autre ticket, conflit `DU` non résolu. **NE PAS reverter sa propre feature, NE PAS `git reset --hard` / `git clean`** (cela détruirait le travail non commité de l'autre session). Recette de récupération : (1) **committer + pousser sa branche tôt** — une fois sur `origin`, le livrable est sûr quoi qu'il arrive au working tree ; (2) pour toute correction ultérieure, ne pas lutter contre le tree contesté → créer un **worktree isolé depuis sa branche** (`git worktree add /tmp/<x> <ma-branche>`, lier `node_modules` au besoin), y lancer typecheck/test/lint, commiter, pousser, puis `git worktree remove`.
 

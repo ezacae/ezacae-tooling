@@ -60,7 +60,8 @@ Ces pré-vérifications sont exécutées **automatiquement par le hook `SessionS
 | État Git injecté | Action |
 |------------------|--------|
 | à jour | ✅ Continuer |
-| en retard de N commit(s) | `git pull` puis continuer |
+| mis à jour automatiquement (fast-forward) | ✅ Continuer — le hook a déjà fait le fast-forward, ne pas relancer `git pull` |
+| en retard de N commit(s) — fast-forward impossible | `git pull` manuel puis continuer |
 | modifications non commitées | ⛔ Stopper — demander comment traiter |
 | divergence | ⛔ Stopper — résoudre manuellement |
 | en avance de N commit(s) | ⚠️ Signaler — demander confirmation |
