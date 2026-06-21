@@ -134,7 +134,7 @@ Pour une modif/bug qui ne justifie pas de conception : invoquer directement le *
 But : relire le diff produit avant intégration.
 
 1. **Déléguer au subagent `pr-review-toolkit:code-reviewer`** sur le diff courant — revue multi-axes (bugs, sécurité, types, tests, conventions du projet). C'est l'agent de revue de référence du pipeline.
-2. En complément si pertinent, lancer `code-simplifier` (réutilisation, dette technique) **en parallèle** (plusieurs appels Agent dans un seul message).
+2. En complément si pertinent, lancer le subagent `pr-review-toolkit:code-simplifier` (réutilisation, dette technique) **en parallèle** (plusieurs appels Agent dans un seul message). Toujours qualifier le plugin : un agent `code-simplifier` non qualifié est ambigu (collision avec `pr-review-toolkit:code-simplifier`).
 3. **Synthétiser** les findings en une liste priorisée (bloquant / recommandé / cosmétique).
 
 **En mode pipeline JIRA :**

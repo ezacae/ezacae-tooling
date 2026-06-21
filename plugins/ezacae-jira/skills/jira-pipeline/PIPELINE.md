@@ -21,7 +21,7 @@ Aucun agent ne devine l'état du travail : **le statut du ticket est la source d
 | **morgan** | Skill | Implémentation **autonome** guidée par la conception (branche, TDD, push, MR). Sous-agent worktree. |
 | **john** | Skill | Implémentation **interactive** (petite modif / bug sans conception lourde). |
 | **pr-review-toolkit:code-reviewer** | Agent | Revue de code multi-axes sur le diff. Déclenché par Sarah en fin d'implémentation. |
-| **`.claude/shared/jira.md`** | Référentiel | Conventions JIRA **communes** à Mike et Sarah (credentials, transitions, gardes, format de commentaire). Source unique. |
+| **skill `jira-pipeline`** (`SKILL.md`) | Skill (plugin ezacae-jira) | Conventions JIRA **communes** à Mike et Sarah (credentials, transitions, gardes, format de commentaire). Source unique — remplace l'ancien `shared/jira.md`. |
 
 morgan et john restent **inchangés** : toute l'orchestration JIRA vit au niveau de Mike et Sarah.
 
@@ -68,9 +68,9 @@ Le statut du ticket **route** l'agent. À l'entrée, chaque agent vérifie le st
 
 Conséquence : c'est **le statut qui décide du point d'entrée**. Sur un ticket existant (UC2), appeler `/mike` ne fait quelque chose que si le ticket est `NOUVEAU`/`CADRAGE`/`RECETTE INTERNE` ; `/sarah` ne fait quelque chose que sur `CONCEPTION`.
 
-Ces gardes ne reposent pas que sur la discipline des agents : deux **hooks Claude Code** (versionnés dans `.claude/settings.json`) les rendent déterministes —
-- **`SessionStart`** (`.claude/hooks/session-start.sh`) : sync Git + vérification des credentials JIRA, injectés en contexte (remplace les Phase 0 bash).
-- **`PreToolUse`** (`.claude/hooks/jira-guard.sh`) : **bloque toute `transitionJiraIssue` hors séquence** du pipeline (filet de sécurité actif uniquement sur les tickets déjà dans un statut du pipeline). Voir `shared/jira.md` §5.
+Ces gardes ne reposent pas que sur la discipline des agents : deux **hooks Claude Code** (déclarés dans `hooks/hooks.json` du plugin ezacae-jira) les rendent déterministes —
+- **`SessionStart`** (`hooks/session-start.sh`) : sync Git + vérification des credentials JIRA + chemin des helpers, injectés en contexte (remplace les Phase 0 bash).
+- **`PreToolUse`** (`hooks/jira-guard.sh` + `hooks/jira-allow-bash.sh`) : **auto-autorise les actions JIRA** et **bloque toute transition hors séquence** du pipeline (filet de sécurité actif uniquement sur les tickets déjà dans un statut du pipeline). Voir le skill `jira-pipeline` §5.
 
 ---
 
@@ -90,7 +90,7 @@ Ces gardes ne reposent pas que sur la discipline des agents : deux **hooks Claud
 | `EXAMINER → RECETTE INTERNE` | Sarah | Revue OK, avant de rendre la main à Mike |
 | (reste `RECETTE INTERNE`) | Mike | Doc finale attachée ; relais humain ensuite |
 
-Les **IDs** de transition sont propres à l'instance JIRA et ne sont jamais codés en dur : chaque agent appelle `getTransitionsForJiraIssue`, trouve la transition dont le **nom de statut cible** correspond à l'étape voulue, puis l'exécute (voir `shared/jira.md`).
+Les **IDs** de transition sont propres à l'instance JIRA et ne sont jamais codés en dur : chaque agent appelle `getTransitionsForJiraIssue`, trouve la transition dont le **nom de statut cible** correspond à l'étape voulue, puis l'exécute (voir le skill `jira-pipeline` §5).
 
 ---
 
@@ -185,20 +185,24 @@ Les agents pilotent JIRA via des **helpers shell** (API REST v3) **auto-autoris�
 
 ## Fichiers du pipeline
 
-| Fichier | Rôle |
-|---------|------|
-| `.claude/PIPELINE.md` | Ce document. |
-| `.claude/shared/jira.md` | Référentiel JIRA commun (chargé par Mike et Sarah). |
-| `scripts/jira-lib.sh` | Bibliothèque partagée (credentials, curl, garde de statut, ADF) — sourcée par les helpers et `jira-guard.sh`. |
-| `scripts/jira-get.sh` | Lecture d'un ticket (+ commentaires). |
-| `scripts/jira-comment.sh` | Ajout de commentaire (ADF). |
-| `scripts/jira-transition.sh` | Transition par nom de statut, garde intégrée. |
-| `scripts/jira-edit.sh` | Édition de champs (résumé, description, labels, assigné). |
-| `scripts/jira-attach.sh` | Upload de pièces jointes. |
-| `scripts/jira-download.sh` | Récupération de pièces jointes. |
-| `.claude/settings.json` | Enregistrement des hooks (SessionStart + PreToolUse). |
-| `.claude/hooks/session-start.sh` | Pré-checks Git + JIRA injectés au démarrage. |
-| `.claude/hooks/jira-guard.sh` | Garde de statut : bloque les transitions hors séquence. |
-| `.claude/commands/mike.md` | Orchestrateur documentaire (intègre les phases JIRA). |
-| `.claude/commands/sarah.md` | Orchestrateur de dev (intègre les phases JIRA). |
-| `.claude/commands/feature.md` | Redirige vers ce pipeline. |
+> Tous les fichiers ci-dessous vivent dans les **plugins** du marketplace `ezacae-tooling`, plus dans le `.claude/` du projet courant (credentials).
+
+| Fichier | Plugin | Rôle |
+|---------|--------|------|
+| `skills/jira-pipeline/PIPELINE.md` | ezacae-jira | Ce document. |
+| `skills/jira-pipeline/SKILL.md` | ezacae-jira | Référentiel JIRA commun (chargé par Mike et Sarah). Remplace l'ancien `shared/jira.md`. |
+| `scripts/jira-lib.sh` | ezacae-jira | Bibliothèque partagée (credentials, curl, garde de statut, ADF) — sourcée par les helpers et `jira-guard.sh`. |
+| `scripts/jira-get.sh` | ezacae-jira | Lecture d'un ticket (+ commentaires). |
+| `scripts/jira-comment.sh` | ezacae-jira | Ajout de commentaire (ADF). |
+| `scripts/jira-transition.sh` | ezacae-jira | Transition par nom de statut, garde intégrée. |
+| `scripts/jira-edit.sh` | ezacae-jira | Édition de champs (résumé, description, labels, assigné). |
+| `scripts/jira-attach.sh` | ezacae-jira | Upload de pièces jointes. |
+| `scripts/jira-download.sh` | ezacae-jira | Récupération de pièces jointes. |
+| `hooks/hooks.json` | ezacae-jira | Déclaration des hooks (SessionStart + PreToolUse). |
+| `hooks/session-start.sh` | ezacae-jira | Pré-checks Git + JIRA + chemin des helpers, injectés au démarrage. |
+| `hooks/jira-guard.sh` | ezacae-jira | Garde de statut : bloque les transitions hors séquence. |
+| `hooks/jira-allow-bash.sh` | ezacae-jira | Auto-autorise les helpers `jira-*.sh`. |
+| `<projet>/.claude/jira.env` | _projet_ | Credentials JIRA (gitignoré, copié depuis `jira.env.example`). |
+| `commands/mike.md` | ezacae-doc | Orchestrateur documentaire (intègre les phases JIRA). |
+| `commands/sarah.md` | ezacae-dev | Orchestrateur de dev (intègre les phases JIRA). |
+| `commands/feature.md` | ezacae-dev | Redirige vers ce pipeline (déprécié). |
