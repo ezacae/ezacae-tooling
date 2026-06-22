@@ -36,10 +36,16 @@ Mike est le **point d'entrée et de sortie documentaire** du pipeline (skill `ji
 1. **Marquer le début du cadrage** : si le ticket est au statut `NOUVEAU`, transitionner aussitôt avec `<HELPERS>/jira-transition.sh <KEY> "CADRAGE"` **avant tout autre travail** — le ticket signale ainsi qu'un cadrage est en cours. S'il est déjà au statut `CADRAGE` (ré-entrée), ne pas re-transitionner.
 2. **Prendre en compte les commentaires du ticket** : relire les commentaires JIRA (récupérés en M-A) et en tenir compte dans le cadrage — précisions, contraintes, arbitrages ou demandes ajoutés par un humain ou un agent précédent. Les intégrer à la fiche de cadrage et signaler explicitement tout commentaire qui complète ou contredit la demande initiale.
 3. Dérouler le travail documentaire habituel (Phases 0 à 5 ci-dessous) : audit, routage Mike-PO / Mike-CTO, mise à jour de la doc.
-4. Produire une **fiche de cadrage fonctionnel** (`docs/<projet>/cadrage-<sujet>.md`) — le « fichier de résultat » qui servira d'entrée à Sarah/chuck : objectif, périmètre, personas impactés, processus concernés, contraintes connues. Pas de détail d'implémentation (ça reste le travail de chuck).
-5. Attacher au ticket : `<HELPERS>/jira-attach.sh <KEY> <fiche + docs mises à jour>`.
-6. **Transition `CADRAGE → CONCEPTION`** + commentaire de passation (§8) en un appel : `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION" --comment "<passation>"`.
-7. **Passer la main à Sarah** : invoquer `/sarah <KEY>` dans le thread principal.
+4. Produire une **fiche de cadrage fonctionnel** dans le **repo source** : `$CODE_REPO_PATH/docs/conception/cadrage-<sujet>.md` — le « fichier de résultat » qui servira d'entrée à Sarah/chuck : objectif, périmètre, personas impactés, processus concernés, contraintes connues. Pas de détail d'implémentation (ça reste le travail de chuck).
+5. **Committer et pousser la fiche dans le repo source** :
+   ```bash
+   git -C $CODE_REPO_PATH add docs/conception/cadrage-<sujet>.md
+   git -C $CODE_REPO_PATH commit -m "docs(cadrage): <sujet>"
+   git -C $CODE_REPO_PATH push
+   ```
+6. Attacher au ticket : `<HELPERS>/jira-attach.sh <KEY> $CODE_REPO_PATH/docs/conception/cadrage-<sujet>.md` (+ docs doc mises à jour le cas échéant).
+7. **Transition `CADRAGE → CONCEPTION`** + commentaire de passation (§8) en un appel : `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION" --comment "<passation>"`.
+8. **Passer la main à Sarah** : invoquer `/sarah <KEY>` dans le thread principal.
 
 ### M-D — Doc finale (statut `RECETTE INTERNE`)
 
@@ -106,9 +112,9 @@ Mike peut être lancé **depuis le repo source ou depuis le repo de documentatio
 
 ## Phase 1 — Lecture du contexte
 
-Lire silencieusement :
-1. `.claude/CLAUDE.md` — contexte complet du projet
-2. `.claude/doc-manifest.md` — état de la documentation
+Lire silencieusement (chemins résolus en Phase 0b) :
+1. `$DOC_REPO_PATH/.claude/CLAUDE.md` — contexte complet du projet
+2. `$DOC_REPO_PATH/.claude/doc-manifest.md` — état de la documentation
 
 ---
 
@@ -117,7 +123,7 @@ Lire silencieusement :
 Comparer le manifest avec ce qui existe réellement dans `docs/` :
 
 ```bash
-find docs/ -name "*.md" | sort
+find $DOC_REPO_PATH/docs/ -name "*.md" | sort
 ```
 
 Pour chaque document marqué `✅ actif` dans le manifest, vérifier que le fichier existe.
