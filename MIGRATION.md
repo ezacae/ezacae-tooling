@@ -20,19 +20,8 @@ cp -R ~/.claude ~/.claude.bak-$(date +%Y%m%d)
 
 ## 1. Installer les 3 plugins
 
-En local (pendant la phase de rodage) :
-
 ```
-/plugin marketplace add ~/DEV/ezacae-claude-tooling
-/plugin install ezacae-jira@ezacae-claude-tooling
-/plugin install ezacae-doc@ezacae-claude-tooling
-/plugin install ezacae-dev@ezacae-claude-tooling
-```
-
-Plus tard, depuis GitLab (après `git push`) :
-
-```
-/plugin marketplace add <URL_GITLAB>/ezacae-claude-tooling
+/plugin marketplace add https://gitlab.com/ezacae/ezacae-claude-tooling
 ```
 
 ---
