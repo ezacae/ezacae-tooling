@@ -8,8 +8,8 @@ Marketplace interne ezacae de plugins Claude Code.
 |--------|---------|--------|
 | `ezacae-base` | Instructions globales ezacae (`conventions.md`) injectées en contexte à chaque session via un hook SessionStart — source unique d'équipe, remplace le copier-coller dans chaque `~/.claude/CLAUDE.md` | `0.1.0` |
 | `ezacae-jira` | Infra commune du pipeline JIRA : skill `jira-pipeline`, helpers REST (`jira-attach`/`jira-download`), hooks `SessionStart` (pré-checks Git/JIRA + chemin des helpers), **auto-autorisation des actions JIRA** (aucune validation manuelle) et garde de statut `PreToolUse` | `0.2.0` |
-| `ezacae-doc` | Orchestrateur Mike (PO/CTO) + commandes vision / personas / processus, avec les subagents `doc-writer` et `stack-writer` | `0.1.0` |
-| `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `john`, `morgan`, `grill-me`, `handoff` ; agents **auto-suffisants** `morgan`/`john` + `code-simplifier`, `technical-design-generator` ; hook SessionStart injectant la racine du plugin (conventions de stack) | `0.1.0` |
+| `ezacae-doc` | Orchestrateur Mike (PO/CTO) + commandes vision / personas / processus, avec les subagents `doc-writer` et `stack-writer` | `0.2.0` |
+| `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `john`, `morgan`, `grill-me`, `handoff` ; agents **auto-suffisants** `morgan`/`john` + `code-simplifier`, `technical-design-generator` ; hook SessionStart injectant la racine du plugin (conventions de stack) | `0.2.0` |
 
 `ezacae-doc` et `ezacae-dev` dépendent de `ezacae-jira` **uniquement** pour le mode pipeline JIRA (`/mike <KEY>`, `/sarah <KEY>`). Hors pipeline, les commandes fonctionnent seules.
 
