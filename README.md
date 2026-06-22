@@ -100,4 +100,4 @@ ezacae-claude-tooling/
         └── agents/       (morgan, john auto-suffisants ; code-simplifier ; technical-design-generator)
 ```
 
-Bumper `version` dans le `plugin.json` concerné à chaque release.
+Conventions de contribution et règle de bump de version : voir [`CONTRIBUTING.md`](CONTRIBUTING.md).
