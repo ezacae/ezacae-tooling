@@ -70,6 +70,40 @@ Si le contexte signale des **credentials JIRA manquants**, s'arrêter avant tout
 
 ---
 
+## Phase 0b — Résolution des chemins projet (CODE_REPO_PATH + DOC_REPO_PATH)
+
+Mike peut être lancé **depuis le repo source ou depuis le repo de documentation**. Il a besoin des deux chemins absolus avant toute lecture/écriture de documentation.
+
+1. Lire `.claude/local.md` du répertoire courant et en extraire :
+   - `CODE_REPO_PATH` — racine du repo de **code source**
+   - `DOC_REPO_PATH` — racine du repo de **documentation fonctionnelle**
+2. **Auto-détecter la nature du répertoire courant** pour pré-remplir le chemin manquant (le chemin détecté vaut `pwd`) :
+   - repo **doc** si `.claude/doc-manifest.md` existe, ou si `docs/00_vision`/`docs/01_product` sont présents ;
+   - repo **source** si un manifeste de stack est présent à la racine (`package.json`, `pubspec.yaml`, `composer.json`, `pyproject.toml`, `go.mod`, `pom.xml`, …) **et** qu'il n'y a pas de `doc-manifest.md`.
+3. Vérifier que les deux dossiers existent (`ls $CODE_REPO_PATH`, `ls $DOC_REPO_PATH`).
+4. **Si un chemin manque ou est invalide**, demander à l'utilisateur (pré-remplir avec le chemin auto-détecté) :
+
+   ```
+   📁 Chemins du projet à confirmer :
+      - Repo SOURCE (code de l'application) : [auto-détecté ou ?]
+      - Repo DOC (documentation fonctionnelle) : [auto-détecté ou ?]
+   ```
+
+   Puis **persister dans les DEUX repos** — écrire le même contenu dans `$CODE_REPO_PATH/.claude/local.md` et `$DOC_REPO_PATH/.claude/local.md` :
+
+   ```
+   ## Config locale (ne pas commiter)
+   - **CODE_REPO_PATH :** /chemin/absolu/vers/source
+   - **DOC_REPO_PATH :**  /chemin/absolu/vers/doc
+   ```
+
+   Garantir que `.claude/local.md` figure dans le `.gitignore` de chaque repo (l'ajouter sinon).
+5. Confirmer en une ligne : `📁 Source : <CODE_REPO_PATH> · Doc : <DOC_REPO_PATH>`.
+
+> À partir d'ici, **toutes les lectures/écritures de documentation de Mike passent par `$DOC_REPO_PATH`** ; les fiches de cadrage/conception passent par `$CODE_REPO_PATH`. Lancé depuis le repo doc, `$DOC_REPO_PATH == pwd` : comportement inchangé.
+
+---
+
 ## Phase 1 — Lecture du contexte
 
 Lire silencieusement :
