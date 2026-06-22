@@ -46,7 +46,7 @@ Fichier personnel, **gitignored** (`.claude/local.md` est déjà dans `.gitignor
 Les deux champs sont des chemins **absolus**. Le fichier est écrit à l'identique dans le repo source
 et dans le repo doc, de sorte que Mike résolve les deux chemins quel que soit son point de lancement.
 
-### B. `/mike` — nouvelle `Phase 0c — Résolution des chemins projet`
+### B. `/mike` — nouvelle `Phase 0b — Résolution des chemins projet`
 
 Insérée **après la Phase 0** (sync Git/JIRA via hook) et **avant la Phase 1**.
 
