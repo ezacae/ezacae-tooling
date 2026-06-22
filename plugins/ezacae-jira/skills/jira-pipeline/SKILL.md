@@ -1,6 +1,6 @@
 ---
 name: jira-pipeline
-description: Conventions communes du pipeline JIRA ezacae (Mike ⇄ Sarah) — credentials, cloudId, transitions par nom de statut, garde de statut, pièces jointes REST, format de commentaire de passation. À charger avant toute opération JIRA dans une commande Mike ou Sarah.
+description: Conventions communes du pipeline JIRA ezacae (Mike ⇄ Sarah) — credentials, helpers REST (toutes opérations, zéro MCP), transitions par nom de statut, garde de statut, pièces jointes REST, format de commentaire de passation. À charger avant toute opération JIRA dans une commande Mike ou Sarah.
 ---
 
 # Référentiel JIRA partagé — Mike & Sarah
@@ -29,36 +29,48 @@ Les credentials sont persistés **par projet** dans **`.claude/jira.env`** (giti
 
 > ⚠️ `JIRA_API_TOKEN` est un secret. Il n'est écrit **que** dans `<projet>/.claude/jira.env`, qui est gitignoré. **Ne jamais** le commiter ni l'inscrire dans un fichier suivi. Si l'utilisateur préfère ne pas saisir le token dans la conversation, lui proposer de remplir `.claude/jira.env` lui-même (copie de `jira.env.example`).
 
-## 2. cloudId
+## 2. cloudId (devenu inutile)
 
-Les outils MCP Atlassian prennent un `cloudId`. L'obtenir une fois via `getAccessibleAtlassianResources` et le réutiliser pour tous les appels de la session.
+Toutes les opérations JIRA passent désormais par les helpers REST `jira-*.sh` (§4), qui n'utilisent **pas** de `cloudId` (l'API REST adresse directement `JIRA_BASE_URL`). **Aucun `cloudId` n'est donc requis pour le pipeline.** Il ne servirait que dans l'unique exception MCP résiduelle (champ d'écran custom obligatoire lors d'une transition, §5) : dans ce cas seulement, l'obtenir via `getAccessibleAtlassianResources`.
 
 ## 3. Résolution du projet (création de ticket — Mike uniquement)
 
 1. Lire un éventuel mapping projet dans le `CLAUDE.md` du dépôt (ex. « ce repo → projet JIRA `ACME` »).
-2. Sinon, lister les projets visibles via `getVisibleJiraProjects` et **demander** lequel utiliser. Ne jamais deviner le projet.
-3. **Choisir un type de ticket dont le workflow porte les statuts du pipeline.** Le pipeline n'est exploitable que si le type d'issue suit le workflow `NOUVEAU → CADRAGE → CONCEPTION → … → RECETTE INTERNE`. Tous les types n'y sont pas rattachés : un type « tâche/sous-tâche » utilise souvent un workflow simplifié (`Nouveau → En cours → Terminé`) **sans** `CADRAGE`/`CONCEPTION` — créer le ticket avec un tel type **casse le pipeline dès la 1re transition**. Lire le mapping de type dans le `CLAUDE.md` du dépôt s'il existe ; sinon **demander** le type à utiliser plutôt que de prendre le type par défaut du projet. Vérifier au besoin avec `getJiraProjectIssueTypesMetadata`.
+2. Sinon, lister les projets visibles via `<HELPERS>/jira-projects.sh` et **demander** lequel utiliser. Ne jamais deviner le projet.
+3. **Choisir un type de ticket dont le workflow porte les statuts du pipeline.** Le pipeline n'est exploitable que si le type d'issue suit le workflow `NOUVEAU → CADRAGE → CONCEPTION → … → RECETTE INTERNE`. Tous les types n'y sont pas rattachés : un type « tâche/sous-tâche » utilise souvent un workflow simplifié (`Nouveau → En cours → Terminé`) **sans** `CADRAGE`/`CONCEPTION` — créer le ticket avec un tel type **casse le pipeline dès la 1re transition**. Lire le mapping de type dans le `CLAUDE.md` du dépôt s'il existe ; sinon **demander** le type à utiliser plutôt que de prendre le type par défaut du projet. Lister les types du projet au besoin avec `<HELPERS>/jira-projects.sh <PROJECT-KEY>`. Créer ensuite le ticket avec `<HELPERS>/jira-create.sh --project <KEY> --type <NOM> --summary "…"`.
    > Exemple constaté (projet `CRM`) : le workflow pipeline n'est porté que par les types **`Story`** et **`Bug`** ; le type **`Tâche`** ne l'a pas.
 
-## 4. Opérations JIRA — helpers REST d'abord, MCP en repli
+## 4. Opérations JIRA — exclusivement via les helpers REST (zéro MCP)
 
-**Privilégier les helpers REST `jira-*.sh`** (plugin ezacae-jira) pour toutes les
-opérations courantes du pipeline. Ils sont **auto-autorisés** (aucune validation
-manuelle, cf. §5) et **fonctionnent en headless/cron** (le jira-watcher), là où le
-MCP distant peut être indisponible. Leur **chemin absolu est injecté par le hook
-SessionStart** (ligne « Helpers JIRA », noté `<HELPERS>` ci-dessous).
+**Toutes** les opérations JIRA du pipeline passent par les helpers REST `jira-*.sh`
+(plugin ezacae-jira) — **jamais par le MCP Atlassian, jamais par un `curl` construit
+à la main**. Ils sont **auto-autorisés** (aucune validation manuelle, cf. §5) et
+**fonctionnent en headless/cron** (le jira-watcher), là où le MCP distant peut être
+indisponible. Leur **chemin absolu est injecté par le hook SessionStart** (ligne
+« Helpers JIRA », noté `<HELPERS>` ci-dessous).
+
+> **Une seule exception MCP** subsiste dans tout le pipeline : un champ d'écran
+> custom obligatoire (≠ worklog) lors d'une transition, que `jira-transition.sh` ne
+> sait pas transmettre (§5). Hors ce cas précis, **aucun outil MCP n'est utilisé** —
+> la colonne « Outil MCP » ci-dessous est donc `_(aucun)_` partout.
+
+> **Lire un ticket — exclusivement via `jira-get.sh`.** La lecture est le seul cas
+> **sans repli** : toujours `<HELPERS>/jira-get.sh <KEY> [--comments]`, jamais le MCP
+> `getJiraIssue`, et **jamais une commande `curl` construite à la main** — le helper
+> encapsule déjà l'appel REST v3 (auth, ADF, champs). Si le helper échoue, relayer
+> l'erreur à l'utilisateur ; ne pas la contourner par un autre chemin.
 
 | Besoin | Helper REST (préférer) | Outil MCP (repli) |
 |--------|------------------------|-------------------|
-| Lire un ticket (+ commentaires) | `<HELPERS>/jira-get.sh <KEY> [--comments]` | `getJiraIssue` |
-| Commenter | `<HELPERS>/jira-comment.sh <KEY> "texte"` ou `-f <fichier>` | `addCommentToJiraIssue` |
-| Transitionner (par **nom de statut**, garde intégrée) | `<HELPERS>/jira-transition.sh <KEY> "<STATUT CIBLE>" [--worklog 30m] [--comment "…"]` | `transitionJiraIssue` |
-| Éditer un champ (résumé, description, labels, assigné) | `<HELPERS>/jira-edit.sh <KEY> --summary "…" --description-file <f> --label <l> --assignee <id\|->` | `editJiraIssue` |
+| Lire un ticket (+ commentaires) | `<HELPERS>/jira-get.sh <KEY> [--comments]` | _(aucun — lecture **toujours** via le helper)_ |
+| Commenter | `<HELPERS>/jira-comment.sh <KEY> "texte"` ou `-f <fichier>` | _(aucun — commentaire **toujours** via le helper)_ |
+| Transitionner (par **nom de statut**, garde intégrée) | `<HELPERS>/jira-transition.sh <KEY> "<STATUT CIBLE>" [--worklog 30m] [--comment "…"]` | _(aucun — transition **toujours** via le helper ; `transitionJiraIssue` réservé au seul champ d'écran custom non-worklog, cf. §5)_ |
+| Éditer un champ (résumé, description, labels, assigné) | `<HELPERS>/jira-edit.sh <KEY> --summary "…" --description-file <f> --label <l> --assignee <id\|->` | _(aucun — édition **toujours** via le helper)_ |
 | Pièces jointes (upload / download) | `<HELPERS>/jira-attach.sh` / `<HELPERS>/jira-download.sh` (cf. §7) | _(pas de support MCP)_ |
-| Créer un ticket | _(MCP)_ | `createJiraIssue` |
-| Rechercher (JQL) | _(MCP)_ | `searchJiraIssuesUsingJql` |
-| Lister les projets | _(MCP)_ | `getVisibleJiraProjects` |
-| Lier deux tickets | _(MCP)_ | `createIssueLink` |
+| Créer un ticket | `<HELPERS>/jira-create.sh --project <KEY> --type <NOM> --summary "…" [--description-file <f>]` | _(aucun)_ |
+| Rechercher (JQL) | `<HELPERS>/jira-search.sh "<JQL>" [--max N]` | _(aucun)_ |
+| Lister les projets / types de ticket | `<HELPERS>/jira-projects.sh [<PROJECT-KEY>]` | _(aucun)_ |
+| Lier deux tickets | `<HELPERS>/jira-link.sh <KEY-A> <KEY-B> [--type "Relates"]` | _(aucun)_ |
 
 > `jira-transition.sh` découvre lui-même l'id de transition à partir du **nom du
 > statut cible** (insensible à la casse) et applique la **garde de statut** — pas
@@ -83,12 +95,19 @@ la **garde de statut** (§5, garde), exécute la transition, puis poste le `--co
 éventuel. S'il n'existe pas de transition vers la cible, il **liste les transitions
 disponibles** et sort en erreur — relayer à l'utilisateur, ne pas forcer.
 
-**Voie MCP (repli)** — même logique, manuelle :
-1. `getTransitionsForJiraIssue(cloudId, issueKey)` → liste `{id, name, to.name}`.
-2. Trouver la transition dont `to.name` correspond au **statut cible** voulu, **insensible à la casse** (statuts incohérents : `Nouveau`, `CONCEPTION`, `Recette Interne`).
-3. **Ne jamais matcher sur le nom de transition** (`.name`), qui diffère du statut cible (ex. : `Initier` → `CONCEPTION`, `Conception terminée` → `CONCEPTION VALIDATION`).
-4. `transitionJiraIssue(cloudId, issueKey, transitionId)`.
-5. Si aucune transition ne mène au statut cible → **lister et demander**.
+> **Transitionner — exclusivement via `jira-transition.sh`.** Comme la lecture (§4),
+> la transition n'a **pas de voie MCP de routine** : toujours le helper, **jamais**
+> `transitionJiraIssue` à la main, **jamais** une commande `curl` construite à la
+> main. Le helper fait déjà, en interne, ce que ferait la voie manuelle — liste les
+> transitions, **résout l'id** par correspondance du **statut cible** (insensible à
+> la casse, jamais sur le nom de transition), applique la **garde** et exécute. S'il
+> échoue (cible inatteignable, garde, champ manquant), il **liste les transitions
+> disponibles** et sort en erreur : relayer à l'utilisateur, ne pas contourner par
+> un autre chemin.
+>
+> **Seule exception MCP** — un champ d'écran **custom obligatoire autre que le
+> worklog** (que le helper ne sait pas passer) : voir la procédure §5 « Champs
+> obligatoires », étape 3.
 
 ### Statuts du workflow (cibles nominales du pipeline)
 
@@ -108,8 +127,8 @@ Procédure :
    ```bash
    <HELPERS>/jira-transition.sh <KEY> "<STATUT CIBLE>" --worklog 30m
    ```
-   (repli MCP : `transitionJiraIssue(cloudId, key, {id}, update={"worklog":[{"add":{"timeSpent":"30m"}}]})`)
-3. Pour un autre champ obligatoire (écran custom), lire `getTransitionsForJiraIssue(..., expand="transitions.fields")` et fournir le champ via le MCP `fields`.
+   Le worklog est géré par le helper — **aucun appel MCP n'est requis** pour ce cas.
+3. **Seul cas justifiant le MCP** : un autre champ d'écran custom obligatoire que le helper ne sait pas passer. Lire `getTransitionsForJiraIssue(..., expand="transitions.fields")` et fournir le champ via `transitionJiraIssue` (`fields`). La garde de statut s'applique quand même (hook `jira-guard.sh`).
 
 ### Auto-autorisation des actions JIRA (hook `PreToolUse`)
 
@@ -147,7 +166,7 @@ Précisions (validées par dry-run sur CRM-337) :
 
 ## 6. Règles de garde à l'entrée
 
-Avant d'agir, lire le statut courant (`getJiraIssue`) et vérifier le droit d'intervention :
+Avant d'agir, lire le statut courant (`<HELPERS>/jira-get.sh <KEY>`) et vérifier le droit d'intervention :
 
 | Agent | Statut autorisé | Sinon |
 |-------|-----------------|-------|
@@ -178,13 +197,26 @@ Les helpers vivent dans le plugin ezacae-jira ; leur **chemin absolu est inject�
 
 # Récupérer les PJ d'un ticket (filtre optionnel sur le nom)
 <HELPERS>/jira-download.sh PROJ-123 /tmp/jira-PROJ-123 cadrage
+
+# Créer un ticket (résolution projet/type en amont — cf. §3)
+<HELPERS>/jira-create.sh --project PROJ --type Story --summary "Titre" --description-file /tmp/desc.md
+
+# Lister les projets visibles, ou les types de ticket d'un projet
+<HELPERS>/jira-projects.sh
+<HELPERS>/jira-projects.sh PROJ
+
+# Rechercher en JQL
+<HELPERS>/jira-search.sh "project = PROJ AND status = CONCEPTION ORDER BY updated DESC"
+
+# Lier deux tickets
+<HELPERS>/jira-link.sh PROJ-123 PROJ-456 --type "Relates"
 ```
 
 Après chaque attache, poster un **commentaire** qui référence la PJ et l'étape (voir format ci-dessous) — au choix via `jira-comment.sh` ou l'option `--comment` de `jira-transition.sh`.
 
 ## 8. Format de commentaire de passation
 
-Chaque transition s'accompagne d'un commentaire lisible et traçable (`jira-comment.sh` ou `jira-transition.sh --comment`, repli MCP `addCommentToJiraIssue`) :
+Chaque transition s'accompagne d'un commentaire lisible et traçable (`jira-comment.sh` ou `jira-transition.sh --comment` — jamais le MCP) :
 
 ```
 🤖 [<Agent>] <étape>

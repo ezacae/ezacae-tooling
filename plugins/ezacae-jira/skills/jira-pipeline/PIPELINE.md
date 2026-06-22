@@ -90,7 +90,7 @@ Ces gardes ne reposent pas que sur la discipline des agents : deux **hooks Claud
 | `EXAMINER → RECETTE INTERNE` | Sarah | Revue OK, avant de rendre la main à Mike |
 | (reste `RECETTE INTERNE`) | Mike | Doc finale attachée ; relais humain ensuite |
 
-Les **IDs** de transition sont propres à l'instance JIRA et ne sont jamais codés en dur : chaque agent appelle `getTransitionsForJiraIssue`, trouve la transition dont le **nom de statut cible** correspond à l'étape voulue, puis l'exécute (voir le skill `jira-pipeline` §5).
+Les **IDs** de transition sont propres à l'instance JIRA et ne sont jamais codés en dur : chaque agent transitionne **exclusivement** via `jira-transition.sh <CLE> "<STATUT CIBLE>"`, qui résout lui-même l'id par correspondance du **nom de statut cible** et applique la garde — jamais d'appel MCP `transitionJiraIssue` ni de `curl` à la main (voir le skill `jira-pipeline` §5).
 
 ---
 
@@ -108,9 +108,9 @@ sequenceDiagram
 
     U->>M: "ajoute une fonctionnalité" (UC1) / clé de ticket (UC2)
     alt UC1 — pas de ticket
-        M->>J: createJiraIssue (→ NOUVEAU)
+        M->>J: jira-create.sh (→ NOUVEAU)
     else UC2 — ticket existant
-        M->>J: getJiraIssue (garde : statut == NOUVEAU / CADRAGE) + lecture des commentaires
+        M->>J: jira-get.sh --comments (garde : statut == NOUVEAU / CADRAGE) + lecture des commentaires
     end
     M->>J: transition NOUVEAU → CADRAGE (début du cadrage)
     M->>M: audit doc, route Mike-PO / Mike-CTO, MAJ doc (prise en compte des commentaires)
@@ -118,7 +118,7 @@ sequenceDiagram
     M->>J: transition CADRAGE → CONCEPTION + commentaire de passation
     M->>S: invoke /sarah <KEY>
 
-    S->>J: getJiraIssue (garde : statut == CONCEPTION)
+    S->>J: jira-get.sh --comments (garde : statut == CONCEPTION)
     S->>J: jira-download.sh — récupère la fiche de Mike
     S->>CH: conception (sur la base du ticket + fiche)
     CH->>J: transition → CONCEPTION VALIDATION
@@ -134,7 +134,7 @@ sequenceDiagram
     S->>J: transition → RECETTE INTERNE
     S->>M: invoke /mike <KEY>
 
-    M->>J: getJiraIssue (garde : statut == RECETTE INTERNE)
+    M->>J: jira-get.sh --comments (garde : statut == RECETTE INTERNE)
     M->>M: met à jour la documentation finale
     M->>J: jira-attach.sh — doc finale + commentaire (reste RECETTE INTERNE)
     M-->>U: pipeline automatisé terminé → relais recette humaine
@@ -147,7 +147,7 @@ sequenceDiagram
 ### UC1 — Demande de fonctionnalité, pas de ticket
 
 1. L'utilisateur demande une fonctionnalité à **Mike**.
-2. Mike **crée le ticket** dans le bon projet (résolution via `getVisibleJiraProjects` + mapping `CLAUDE.md`, sinon il demande) au statut `NOUVEAU`.
+2. Mike **crée le ticket** (`jira-create.sh`) dans le bon projet (résolution via `jira-projects.sh` + mapping `CLAUDE.md`, sinon il demande) au statut `NOUVEAU`.
 3. Mike **transitionne le ticket en `CADRAGE`** dès le début du cadrage, puis fait son travail habituel : lecture des commentaires du ticket, audit de complétude, routage Mike-PO / Mike-CTO, mise à jour de la doc produit/technique.
 4. Mike produit une **fiche de cadrage fonctionnel** (le « fichier de résultat »), l'**attache** au ticket, le **transitionne** en `CONCEPTION`, **commente** la passation, puis **invoque `/sarah <KEY>`**.
 5. **Sarah** vérifie le statut (`CONCEPTION`), **télécharge** la fiche de Mike, et la passe à **chuck**.
@@ -161,7 +161,7 @@ sequenceDiagram
 
 Identique, sauf que **le contenu du ticket est la source de vérité** au lieu d'une demande orale :
 
-- Mike (sur `NOUVEAU` ou `CADRAGE`) **lit** le ticket et ses **commentaires** (`getJiraIssue`) et cadre sur cette base au lieu de le créer ; sur `NOUVEAU`, il passe d'abord le ticket en `CADRAGE`.
+- Mike (sur `NOUVEAU` ou `CADRAGE`) **lit** le ticket et ses **commentaires** (`jira-get.sh <CLE> --comments`) et cadre sur cette base au lieu de le créer ; sur `NOUVEAU`, il passe d'abord le ticket en `CADRAGE`.
 - Sarah (sur `CONCEPTION`) se base sur le contenu du ticket + la fiche attachée.
 - Toutes les règles de PJ, transitions, commentaires et gardes sont **identiques** à UC1.
 
@@ -178,8 +178,12 @@ Les agents pilotent JIRA via des **helpers shell** (API REST v3) **auto-autoris�
 - `jira-transition.sh <CLE> "<STATUT CIBLE>" [--worklog …] [--comment …]` — transition par nom de statut, **garde de statut intégrée**.
 - `jira-edit.sh <CLE> [--summary|--description|--label|--assignee …]` — édition de champs.
 - `jira-attach.sh <CLE> <fichier...>` / `jira-download.sh <CLE> <dossier> [filtre]` — pièces jointes (le MCP n'offre pas l'upload).
+- `jira-create.sh --project <KEY> --type <NOM> --summary "…"` — création de ticket.
+- `jira-projects.sh [<PROJECT-KEY>]` — liste des projets visibles, ou des types de ticket d'un projet.
+- `jira-search.sh "<JQL>"` — recherche JQL.
+- `jira-link.sh <KEY-A> <KEY-B> [--type …]` — liaison de deux tickets.
 
-**Prérequis** : `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` (+ `jq`). Voir le skill `jira-pipeline` (§1, §4). Restent côté **MCP Atlassian** (repli) : création de ticket, recherche JQL, liste des projets, liens entre tickets.
+**Prérequis** : `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` (+ `jq`). Voir le skill `jira-pipeline` (§1, §4). **Plus aucun outil MCP Atlassian n'est requis** — tout le pipeline est piloté par ces helpers REST. Seule exception résiduelle : un champ d'écran custom obligatoire lors d'une transition (skill `jira-pipeline` §5).
 
 ---
 
@@ -198,6 +202,10 @@ Les agents pilotent JIRA via des **helpers shell** (API REST v3) **auto-autoris�
 | `scripts/jira-edit.sh` | ezacae-jira | Édition de champs (résumé, description, labels, assigné). |
 | `scripts/jira-attach.sh` | ezacae-jira | Upload de pièces jointes. |
 | `scripts/jira-download.sh` | ezacae-jira | Récupération de pièces jointes. |
+| `scripts/jira-create.sh` | ezacae-jira | Création d'un ticket. |
+| `scripts/jira-projects.sh` | ezacae-jira | Liste des projets visibles / types de ticket d'un projet. |
+| `scripts/jira-search.sh` | ezacae-jira | Recherche JQL. |
+| `scripts/jira-link.sh` | ezacae-jira | Liaison de deux tickets. |
 | `hooks/hooks.json` | ezacae-jira | Déclaration des hooks (SessionStart + PreToolUse). |
 | `hooks/session-start.sh` | ezacae-jira | Pré-checks Git + JIRA + chemin des helpers, injectés au démarrage. |
 | `hooks/jira-guard.sh` | ezacae-jira | Garde de statut : bloque les transitions hors séquence. |

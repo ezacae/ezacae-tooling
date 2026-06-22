@@ -72,12 +72,16 @@ command -v jq >/dev/null 2>&1 || JIRA_CTX="$JIRA_CTX ; ⚠ jq absent (requis pou
 CTX="🔧 Pré-checks pipeline Mike⇄Sarah (hook SessionStart)
 • Git : ${GIT_CTX}
 • JIRA : ${JIRA_CTX}
-• Helpers JIRA (REST, auto-autorisés — privilégier au MCP, fonctionnent en headless) :
+• Helpers JIRA (REST, auto-autorisés — toutes les opérations JIRA passent par eux, AUCUN MCP ; fonctionnent en headless) :
     lire        : ${HELPER_DIR}/jira-get.sh <KEY> [--comments]
     commenter   : ${HELPER_DIR}/jira-comment.sh <KEY> \"texte\" | -f <fichier>
     transition  : ${HELPER_DIR}/jira-transition.sh <KEY> <STATUT-CIBLE> [--worklog 30m] [--comment \"…\"]
     éditer      : ${HELPER_DIR}/jira-edit.sh <KEY> [--summary|--description|--label|--assignee …]
-    PJ          : ${HELPER_DIR}/jira-attach.sh <KEY> <fichier…> ; ${HELPER_DIR}/jira-download.sh <KEY> <dossier> [filtre]"
+    PJ          : ${HELPER_DIR}/jira-attach.sh <KEY> <fichier…> ; ${HELPER_DIR}/jira-download.sh <KEY> <dossier> [filtre]
+    créer       : ${HELPER_DIR}/jira-create.sh --project <KEY> --type <NOM> --summary \"…\" [--description-file <f>]
+    projets     : ${HELPER_DIR}/jira-projects.sh [<PROJECT-KEY>]   (sans arg = liste ; avec = types de ticket)
+    rechercher  : ${HELPER_DIR}/jira-search.sh \"<JQL>\" [--max N]
+    lier        : ${HELPER_DIR}/jira-link.sh <CLE-INWARD> <CLE-OUTWARD> [--type \"Relates\"]"
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg c "$CTX" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$c}}'

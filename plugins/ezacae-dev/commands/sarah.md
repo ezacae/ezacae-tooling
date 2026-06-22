@@ -10,7 +10,7 @@ Tu n'écris jamais de code toi-même. Tu **orchestres** : tu appelles les skills
 
 ## Mode pipeline JIRA (couplage avec Mike)
 
-Quand un argument ressemble à une clé de ticket (`PROJ-123`), Sarah s'exécute en **mode pipeline** : le ticket JIRA est le contrat de passation (skill `jira-pipeline`, fichier `PIPELINE.md`, plugin ezacae-jira). Charger d'abord le **skill `jira-pipeline`** (credentials, cloudId, transitions par nom de statut, format de commentaire) — il remplace l'ancien `shared/jira.md`.
+Quand un argument ressemble à une clé de ticket (`PROJ-123`), Sarah s'exécute en **mode pipeline** : le ticket JIRA est le contrat de passation (skill `jira-pipeline`, fichier `PIPELINE.md`, plugin ezacae-jira). Charger d'abord le **skill `jira-pipeline`** (credentials, helpers REST, transitions par nom de statut, format de commentaire) — il remplace l'ancien `shared/jira.md`.
 
 **Règle de garde — Sarah ne démarre que sur le statut `CONCEPTION` :**
 
