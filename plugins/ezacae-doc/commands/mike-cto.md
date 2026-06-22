@@ -10,11 +10,13 @@ Tu es invoqué directement par l'utilisateur ou délégué par Mike.
 
 ## Phase 0 — Vérification de la synchronisation Git
 
+> Cette vérification porte sur le **repo de documentation** (`$DOC_REPO_PATH`, résolu en Phase 0b). Si Mike-CTO est lancé depuis le repo doc, `$DOC_REPO_PATH == pwd`. Utiliser `git -C $DOC_REPO_PATH` pour `fetch`/`status`/`pull`.
+
 Avant toute action, vérifie que le repo local est en phase avec GitLab :
 
 ```bash
-git fetch origin
-git status
+git -C $DOC_REPO_PATH fetch origin
+git -C $DOC_REPO_PATH status
 ```
 
 | Situation | Action |
@@ -27,63 +29,30 @@ git status
 
 ---
 
-## Phase 0b — Synchronisation du code source
+## Phase 0b — Résolution des chemins projet & synchronisation du code source
 
-Lire `.claude/CLAUDE.md` pour extraire `GITLAB_URL` et la branche de référence.
+Mike-CTO peut être invoqué directement ou délégué par Mike, depuis le repo source **ou** le repo doc.
 
-Chercher `CODE_REPO_PATH` dans `.claude/local.md` (fichier personnel, non versionné, gitignored).
-
----
-
-### Cas A — `CODE_REPO_PATH` trouvé dans `local.md`
-
-Vérifier que le dossier existe (`ls [CODE_REPO_PATH]`), puis afficher :
-
-```
-📁 Code source configuré : [CODE_REPO_PATH]
-   Synchroniser avec le dernier commit main ? (O/n)
-```
-
-- **O ou Entrée** → exécuter :
-
-```bash
-git -C [CODE_REPO_PATH] fetch origin
-git -C [CODE_REPO_PATH] pull origin main
-git -C [CODE_REPO_PATH] log --oneline -3
-```
-
-- **n** → continuer sans `commit_ref`
-
-| Situation | Action |
-|-----------|--------|
-| Pull réussi | ✅ Extraire hash complet + message + date → `commit_ref` |
-| Dossier introuvable | ⚠️ Signaler — proposer de mettre à jour `local.md` — continuer sans `commit_ref` |
-| Conflit / erreur git | ⚠️ Signaler — continuer sans `commit_ref` |
-
----
-
-### Cas B — `CODE_REPO_PATH` absent (`local.md` inexistant ou champ manquant)
-
-Demander :
-
-```
-📁 Chemin local vers le repo code source ?
-   (ex: /Users/prenom/Dev/tixdrop — Entrée pour ignorer)
-   > _
-```
-
-- **Chemin fourni** :
-  1. Vérifier que le dossier existe
-  2. Si oui : `git -C [path] pull origin main`, extraire `commit_ref`
-  3. Demander : `Sauvegarder ce chemin dans .claude/local.md pour les prochaines fois ? (O/n)`
-  4. Si O : écrire dans `.claude/local.md` :
+1. **Résoudre les chemins** comme en `/mike` Phase 0b : lire `.claude/local.md` du répertoire courant, extraire `CODE_REPO_PATH` et `DOC_REPO_PATH`. Auto-détecter la nature du `pwd` pour pré-remplir (doc si `.claude/doc-manifest.md`/`docs/00_vision` ; source si manifeste de stack sans `doc-manifest.md`). Vérifier l'existence des deux dossiers.
+2. **Si un chemin manque/invalide** : demander à l'utilisateur (pré-rempli avec le détecté), puis écrire le même `.claude/local.md` (champs `CODE_REPO_PATH` + `DOC_REPO_PATH`) dans **les deux** repos et garantir `.claude/local.md` dans chaque `.gitignore`.
+3. Confirmer : `📁 Source : <CODE_REPO_PATH> · Doc : <DOC_REPO_PATH>`.
+4. **Synchroniser le code source** pour le pied de page des documents générés :
+   ```
+   📁 Code source : $CODE_REPO_PATH
+      Synchroniser avec le dernier commit main ? (O/n)
+   ```
+   - **O ou Entrée** :
+     ```bash
+     git -C $CODE_REPO_PATH fetch origin
+     git -C $CODE_REPO_PATH pull origin main
+     git -C $CODE_REPO_PATH log --oneline -3
      ```
-     ## Config locale (ne pas commiter)
-     - **CODE_REPO_PATH :** [chemin fourni]
-     ```
-- **Entrée vide** : continuer sans `commit_ref`
+   - **n** → continuer sans `commit_ref`.
 
----
+   | Situation | Action |
+   |-----------|--------|
+   | Pull réussi | ✅ Extraire hash complet + message + date → `commit_ref` |
+   | Conflit / erreur git | ⚠️ Signaler — continuer sans `commit_ref` |
 
 Le `commit_ref` (hash complet + message + date) sera passé à chaque `stack-writer` pour le pied de page des documents générés.
 
@@ -92,11 +61,11 @@ Le `commit_ref` (hash complet + message + date) sera passé à chaque `stack-wri
 ## Phase 1 — Lecture du contexte
 
 Lire silencieusement :
-1. `.claude/CLAUDE.md` — contexte du projet, stack, composants applicatifs, `GITLAB_URL`
-2. `.claude/local.md` — config personnelle (`CODE_REPO_PATH`)
-3. `.claude/doc-manifest.md` — documents attendus et leur statut
-4. Tous les fichiers dans `docs/02_architecture/`, `docs/03_donnees/` et `docs/04_exploitation/` (et sous-dossiers techniques existants)
-5. `docs/00_vision/vision.md` — périmètre fonctionnel pour cohérence
+1. `$DOC_REPO_PATH/.claude/CLAUDE.md` — contexte du projet, stack, composants applicatifs, `GITLAB_URL`
+2. `.claude/local.md` (cwd) — config personnelle (`CODE_REPO_PATH`, `DOC_REPO_PATH`)
+3. `$DOC_REPO_PATH/.claude/doc-manifest.md` — documents attendus et leur statut
+4. Tous les fichiers dans `$DOC_REPO_PATH/docs/02_architecture/`, `$DOC_REPO_PATH/docs/03_donnees/` et `$DOC_REPO_PATH/docs/04_exploitation/` (et sous-dossiers techniques existants)
+5. `$DOC_REPO_PATH/docs/00_vision/vision.md` — périmètre fonctionnel pour cohérence
 
 ---
 
@@ -184,7 +153,7 @@ MR : [titre proposé]
 ### 5.1 Branche
 
 ```bash
-git checkout -b docs/cto/[slug]
+git -C $DOC_REPO_PATH checkout -b docs/cto/[slug]
 ```
 
 ### 5.2 Sous-agents en parallèle
@@ -216,10 +185,10 @@ Mettre à jour `.claude/doc-manifest.md` si nécessaire :
 Lister les fichiers `.md` existants dans `docs/` :
 
 ```bash
-find docs/ -name "*.md" | sort
+find $DOC_REPO_PATH/docs/ -name "*.md" | sort
 ```
 
-Générer (ou régénérer) le fichier `mkdocs.yml` à la racine du projet. Si absent, le créer.
+Générer (ou régénérer) le fichier `mkdocs.yml` à la racine `$DOC_REPO_PATH`. Si absent, le créer.
 
 **Structure attendue de `mkdocs.yml` :**
 - `site_name` : `"Documentation — [Nom du projet]"` (nom extrait de `.claude/CLAUDE.md`)
@@ -246,19 +215,21 @@ Générer (ou régénérer) le fichier `mkdocs.yml` à la racine du projet. Si a
 ### 5.5 Commit et push
 
 ```bash
-git add docs/ .claude/doc-manifest.md mkdocs.yml
-git commit -m "docs(cto): [description courte]"
-git push -u origin docs/cto/[slug]
+git -C $DOC_REPO_PATH add docs/ .claude/doc-manifest.md mkdocs.yml
+git -C $DOC_REPO_PATH commit -m "docs(cto): [description courte]"
+git -C $DOC_REPO_PATH push -u origin docs/cto/[slug]
 ```
 
 ### 5.6 MR GitLab
 
+> `glab` lit le repo depuis le dossier courant — l'exécuter via `(cd $DOC_REPO_PATH && … )`.
+
 ```bash
-glab mr create \
+(cd $DOC_REPO_PATH && glab mr create \
   --title "[Titre]" \
   --description "[Description : composants impactés, ce qui a changé, pourquoi, points d'attention pour le reviewer]" \
   --target-branch main \
-  --assignee @me
+  --assignee @me)
 ```
 
 Afficher le lien et **s'arrêter**.
@@ -279,7 +250,5 @@ Déclenché par `/mike-cto feedback` ou description de commentaires de MR.
 3. Si légitime : relancer les `stack-writer` concernés
 
 ```bash
-git add docs/ .claude/doc-manifest.md mkdocs.yml
-git commit --amend --no-edit
-git push --force-with-lease
+(cd $DOC_REPO_PATH && git add docs/ .claude/doc-manifest.md mkdocs.yml && git commit --amend --no-edit && git push --force-with-lease)
 ```

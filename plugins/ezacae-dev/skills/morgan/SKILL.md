@@ -50,9 +50,9 @@ Arguments du skill (séparés par `|`) :
 3. **Instructions** (optionnel) — priorités, contraintes, exclusions
 
 ```
-/morgan docs/design-notifications.md
-/morgan docs/design-billing.md | Le praticien veut voir ses factures Stripe
-/morgan docs/design-export.md | Export CSV | Priorité performance
+/morgan docs/conception/design-notifications.md
+/morgan docs/conception/design-billing.md | Le praticien veut voir ses factures Stripe
+/morgan docs/conception/design-export.md | Export CSV | Priorité performance
 ```
 
 ## Sources de vérité
@@ -317,7 +317,7 @@ Puis **re-vérifier depuis le début**. Pas de raccourci.
 
 | Erreur | Action |
 |---|---|
-| Fichier de conception introuvable | Lister `docs/` et demander le bon chemin |
+| Fichier de conception introuvable | Lister `docs/conception/` et demander le bon chemin |
 | Workspace git sale | Avertir et demander confirmation |
 | Push rejeté | Vérifier branche remote, rebase si nécessaire |
 | `glab`/`gh` non disponible | Donner la commande manuelle + URL repo |

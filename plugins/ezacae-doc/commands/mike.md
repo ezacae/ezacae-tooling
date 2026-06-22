@@ -36,10 +36,16 @@ Mike est le **point d'entrée et de sortie documentaire** du pipeline (skill `ji
 1. **Marquer le début du cadrage** : si le ticket est au statut `NOUVEAU`, transitionner aussitôt avec `<HELPERS>/jira-transition.sh <KEY> "CADRAGE"` **avant tout autre travail** — le ticket signale ainsi qu'un cadrage est en cours. S'il est déjà au statut `CADRAGE` (ré-entrée), ne pas re-transitionner.
 2. **Prendre en compte les commentaires du ticket** : relire les commentaires JIRA (récupérés en M-A) et en tenir compte dans le cadrage — précisions, contraintes, arbitrages ou demandes ajoutés par un humain ou un agent précédent. Les intégrer à la fiche de cadrage et signaler explicitement tout commentaire qui complète ou contredit la demande initiale.
 3. Dérouler le travail documentaire habituel (Phases 0 à 5 ci-dessous) : audit, routage Mike-PO / Mike-CTO, mise à jour de la doc.
-4. Produire une **fiche de cadrage fonctionnel** (`docs/<projet>/cadrage-<sujet>.md`) — le « fichier de résultat » qui servira d'entrée à Sarah/chuck : objectif, périmètre, personas impactés, processus concernés, contraintes connues. Pas de détail d'implémentation (ça reste le travail de chuck).
-5. Attacher au ticket : `<HELPERS>/jira-attach.sh <KEY> <fiche + docs mises à jour>`.
-6. **Transition `CADRAGE → CONCEPTION`** + commentaire de passation (§8) en un appel : `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION" --comment "<passation>"`.
-7. **Passer la main à Sarah** : invoquer `/sarah <KEY>` dans le thread principal.
+4. Produire une **fiche de cadrage fonctionnel** dans le **repo source** : `$CODE_REPO_PATH/docs/conception/cadrage-<sujet>.md` — le « fichier de résultat » qui servira d'entrée à Sarah/chuck : objectif, périmètre, personas impactés, processus concernés, contraintes connues. Pas de détail d'implémentation (ça reste le travail de chuck).
+5. **Committer et pousser la fiche dans le repo source** :
+   ```bash
+   git -C $CODE_REPO_PATH add docs/conception/cadrage-<sujet>.md
+   git -C $CODE_REPO_PATH commit -m "docs(cadrage): <sujet>"
+   git -C $CODE_REPO_PATH push
+   ```
+6. Attacher au ticket : `<HELPERS>/jira-attach.sh <KEY> $CODE_REPO_PATH/docs/conception/cadrage-<sujet>.md` (+ docs doc mises à jour le cas échéant).
+7. **Transition `CADRAGE → CONCEPTION`** + commentaire de passation (§8) en un appel : `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION" --comment "<passation>"`.
+8. **Passer la main à Sarah** : invoquer `/sarah <KEY>` dans le thread principal.
 
 ### M-D — Doc finale (statut `RECETTE INTERNE`)
 
@@ -70,11 +76,45 @@ Si le contexte signale des **credentials JIRA manquants**, s'arrêter avant tout
 
 ---
 
+## Phase 0b — Résolution des chemins projet (CODE_REPO_PATH + DOC_REPO_PATH)
+
+Mike peut être lancé **depuis le repo source ou depuis le repo de documentation**. Il a besoin des deux chemins absolus avant toute lecture/écriture de documentation.
+
+1. Lire `.claude/local.md` du répertoire courant et en extraire :
+   - `CODE_REPO_PATH` — racine du repo de **code source**
+   - `DOC_REPO_PATH` — racine du repo de **documentation fonctionnelle**
+2. **Auto-détecter la nature du répertoire courant** pour pré-remplir le chemin manquant (le chemin détecté vaut `pwd`) :
+   - repo **doc** si `.claude/doc-manifest.md` existe, ou si `docs/00_vision`/`docs/01_product` sont présents ;
+   - repo **source** si un manifeste de stack est présent à la racine (`package.json`, `pubspec.yaml`, `composer.json`, `pyproject.toml`, `go.mod`, `pom.xml`, …) **et** qu'il n'y a pas de `doc-manifest.md`.
+3. Vérifier que les deux dossiers existent (`ls $CODE_REPO_PATH`, `ls $DOC_REPO_PATH`).
+4. **Si un chemin manque ou est invalide**, demander à l'utilisateur (pré-remplir avec le chemin auto-détecté) :
+
+   ```
+   📁 Chemins du projet à confirmer :
+      - Repo SOURCE (code de l'application) : [auto-détecté ou ?]
+      - Repo DOC (documentation fonctionnelle) : [auto-détecté ou ?]
+   ```
+
+   Puis **persister dans les DEUX repos** — écrire le même contenu dans `$CODE_REPO_PATH/.claude/local.md` et `$DOC_REPO_PATH/.claude/local.md` :
+
+   ```
+   ## Config locale (ne pas commiter)
+   - **CODE_REPO_PATH :** /chemin/absolu/vers/source
+   - **DOC_REPO_PATH :**  /chemin/absolu/vers/doc
+   ```
+
+   Garantir que `.claude/local.md` figure dans le `.gitignore` de chaque repo (l'ajouter sinon).
+5. Confirmer en une ligne : `📁 Source : <CODE_REPO_PATH> · Doc : <DOC_REPO_PATH>`.
+
+> À partir d'ici, **toutes les lectures/écritures de documentation de Mike passent par `$DOC_REPO_PATH`** ; les fiches de cadrage/conception passent par `$CODE_REPO_PATH`. Lancé depuis le repo doc, `$DOC_REPO_PATH == pwd` : comportement inchangé.
+
+---
+
 ## Phase 1 — Lecture du contexte
 
-Lire silencieusement :
-1. `.claude/CLAUDE.md` — contexte complet du projet
-2. `.claude/doc-manifest.md` — état de la documentation
+Lire silencieusement (chemins résolus en Phase 0b) :
+1. `$DOC_REPO_PATH/.claude/CLAUDE.md` — contexte complet du projet
+2. `$DOC_REPO_PATH/.claude/doc-manifest.md` — état de la documentation
 
 ---
 
@@ -83,7 +123,7 @@ Lire silencieusement :
 Comparer le manifest avec ce qui existe réellement dans `docs/` :
 
 ```bash
-find docs/ -name "*.md" | sort
+find $DOC_REPO_PATH/docs/ -name "*.md" | sort
 ```
 
 Pour chaque document marqué `✅ actif` dans le manifest, vérifier que le fichier existe.

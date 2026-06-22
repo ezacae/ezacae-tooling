@@ -10,11 +10,13 @@ Tu es invoqué directement par l'utilisateur ou délégué par Mike.
 
 ## Phase 0 — Vérification de la synchronisation Git
 
+> Cette vérification porte sur le **repo de documentation** (`$DOC_REPO_PATH`, résolu en Phase 0b). Utiliser `git -C $DOC_REPO_PATH`.
+
 Avant toute action, vérifie que le repo local est en phase avec GitLab :
 
 ```bash
-git fetch origin
-git status
+git -C $DOC_REPO_PATH fetch origin
+git -C $DOC_REPO_PATH status
 ```
 
 Analyse le résultat et agis en conséquence :
@@ -29,14 +31,22 @@ Analyse le résultat et agis en conséquence :
 
 ---
 
+## Phase 0b — Résolution du chemin de documentation
+
+Mike-PO peut être invoqué directement ou délégué par Mike, depuis le repo source **ou** le repo doc. Résoudre `DOC_REPO_PATH` comme en `/mike` Phase 0b : lire `.claude/local.md` du répertoire courant, en extraire `DOC_REPO_PATH` (et `CODE_REPO_PATH`). Auto-détecter le `pwd` pour pré-remplir (doc si `.claude/doc-manifest.md`/`docs/00_vision` ; source si manifeste de stack sans `doc-manifest.md`). Si `DOC_REPO_PATH` manque/invalide : demander à l'utilisateur puis écrire `.claude/local.md` (champs `CODE_REPO_PATH` + `DOC_REPO_PATH`) dans les deux repos, et garantir `.claude/local.md` dans chaque `.gitignore`. Confirmer : `📁 Doc : <DOC_REPO_PATH>`.
+
+Lancé depuis le repo doc, `$DOC_REPO_PATH == pwd` : comportement inchangé. **Toutes les opérations git, lectures et écritures ci-dessous portent sur `$DOC_REPO_PATH`.**
+
+---
+
 ## Phase 1 — Lecture du contexte
 
 Lire silencieusement :
-1. `.claude/CLAUDE.md` — contexte du projet
-2. `.claude/doc-manifest.md` — documents attendus et leur statut
-3. `docs/00_vision/vision.md` — périmètre, hypothèses, proposition de valeur
-4. `docs/01_product/personas.md` — types d'utilisateurs et capacités
-5. `docs/01_product/processus.md` — processus métier existants
+1. `$DOC_REPO_PATH/.claude/CLAUDE.md` — contexte du projet
+2. `$DOC_REPO_PATH/.claude/doc-manifest.md` — documents attendus et leur statut
+3. `$DOC_REPO_PATH/docs/00_vision/vision.md` — périmètre, hypothèses, proposition de valeur
+4. `$DOC_REPO_PATH/docs/01_product/personas.md` — types d'utilisateurs et capacités
+5. `$DOC_REPO_PATH/docs/01_product/processus.md` — processus métier existants
 
 ---
 
@@ -99,7 +109,7 @@ Procéder sans attendre confirmation explicite si l'alignement est acquis.
 ### 5.1 Branche
 
 ```bash
-git checkout -b docs/po/[slug]
+git -C $DOC_REPO_PATH checkout -b docs/po/[slug]
 ```
 
 ### 5.2 Sous-agents en parallèle
@@ -125,10 +135,10 @@ Si le changement crée un nouveau document, mettre à jour `.claude/doc-manifest
 Lister les fichiers `.md` existants dans `docs/` :
 
 ```bash
-find docs/ -name "*.md" | sort
+find $DOC_REPO_PATH/docs/ -name "*.md" | sort
 ```
 
-Générer (ou régénérer) le fichier `mkdocs.yml` à la racine du projet. Si absent, le créer.
+Générer (ou régénérer) le fichier `mkdocs.yml` à la racine `$DOC_REPO_PATH`. Si absent, le créer.
 
 **Structure attendue de `mkdocs.yml` :**
 - `site_name` : `"Documentation — [Nom du projet]"` (nom extrait de `.claude/CLAUDE.md`)
@@ -155,19 +165,21 @@ Générer (ou régénérer) le fichier `mkdocs.yml` à la racine du projet. Si a
 ### 5.5 Commit et push
 
 ```bash
-git add docs/ .claude/doc-manifest.md mkdocs.yml
-git commit -m "docs(po): [description courte]"
-git push -u origin docs/po/[slug]
+git -C $DOC_REPO_PATH add docs/ .claude/doc-manifest.md mkdocs.yml
+git -C $DOC_REPO_PATH commit -m "docs(po): [description courte]"
+git -C $DOC_REPO_PATH push -u origin docs/po/[slug]
 ```
 
 ### 5.6 MR GitLab
 
+> `glab` lit le repo depuis le dossier courant — l'exécuter via `(cd $DOC_REPO_PATH && … )`.
+
 ```bash
-glab mr create \
+(cd $DOC_REPO_PATH && glab mr create \
   --title "[Titre]" \
   --description "[Description : ce qui a changé, pourquoi, documents modifiés, points d'attention]" \
   --target-branch main \
-  --assignee @me
+  --assignee @me)
 ```
 
 Afficher le lien et **s'arrêter**. La validation se fait dans GitLab.
@@ -188,7 +200,5 @@ Déclenché par `/mike-po feedback` ou description de commentaires de MR.
 3. Si légitime : relancer les `doc-writer` concernés
 
 ```bash
-git add docs/ .claude/doc-manifest.md mkdocs.yml
-git commit --amend --no-edit
-git push --force-with-lease
+(cd $DOC_REPO_PATH && git add docs/ .claude/doc-manifest.md mkdocs.yml && git commit --amend --no-edit && git push --force-with-lease)
 ```
