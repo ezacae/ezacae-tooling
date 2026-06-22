@@ -150,7 +150,7 @@ Lister les fichiers à créer/modifier **par couche, selon la structure de la st
 - Parcours utilisateur (happy path + erreurs)
 - États : chargement, vide, erreur
 - Palette / design tokens du projet — voir `CLAUDE.md`
-- Maquette HTML **annexe** — voir `skills/chuck/mockup-guidelines.md`. C'est un artefact visuel séparé (`docs/<nom>.mockup.html`), **référencé depuis le document de conception**. Ce n'est PAS le document de conception : le `.md` reste la source unique du plan, du modèle de données et de l'architecture.
+- Maquette HTML **annexe** — voir `skills/chuck/mockup-guidelines.md`. C'est un artefact visuel séparé (`docs/conception/<nom>.mockup.html`), **référencé depuis le document de conception**. Ce n'est PAS le document de conception : le `.md` reste la source unique du plan, du modèle de données et de l'architecture.
 
 ### 6. Risques & contraintes
 
@@ -229,18 +229,18 @@ Corriger directement. Pas de re-review.
 
 ### 9. Validation
 
-**Document de conception unique : `docs/<nom>.md`.** Il commence par un titre H1 clair (`# <Titre de la fonctionnalité>`) — Morgan en dérive le nom de branche. La maquette HTML éventuelle est un fichier annexe (`docs/<nom>.mockup.html`) référencé depuis ce `.md`, jamais l'inverse.
+**Document de conception unique : `docs/conception/<nom>.md`.** Il commence par un titre H1 clair (`# <Titre de la fonctionnalité>`) — Morgan en dérive le nom de branche. La maquette HTML éventuelle est un fichier annexe (`docs/conception/<nom>.mockup.html`) référencé depuis ce `.md`, jamais l'inverse.
 
 - Présenter le document complet
 - Demander validation **avant** implémentation :
 
-> "Conception écrite dans `docs/<nom>.md`. Revois le document et dis-moi si tu veux des modifications avant l'implémentation."
+> "Conception écrite dans `docs/conception/<nom>.md`. Revois le document et dis-moi si tu veux des modifications avant l'implémentation."
 
 - Si modifications → appliquer et re-présenter
-- Une fois validé, **commiter et pousser** `docs/<nom>.md` (et sa maquette éventuelle) : c'est la précondition pour que morgan, dont le worktree est créé fresh depuis `origin/main`, voie le document. Sans cela, morgan s'arrêtera en signalant le fichier absent.
+- Une fois validé, **commiter et pousser** `docs/conception/<nom>.md` (et sa maquette éventuelle) : c'est la précondition pour que morgan, dont le worktree est créé fresh depuis `origin/main`, voie le document. Sans cela, morgan s'arrêtera en signalant le fichier absent.
 
 ```bash
-git add docs/<nom>.md docs/<nom>.mockup.html  # maquette si présente
+git add docs/conception/<nom>.md docs/conception/<nom>.mockup.html  # maquette si présente
 git commit -m "docs(conception): <sujet>"
 git push
 ```
@@ -248,8 +248,8 @@ git push
 - Puis émettre la **ligne de passation** standard (captée par l'orchestrateur `/sarah`, ou lue par l'utilisateur) :
 
 ```
-✅ Conception validée et poussée : docs/<nom>.md — type: feature|bug — titre: <H1>
-   Exécution : /morgan docs/<nom>.md  (autonome)  ou  skill john  (interactif)
+✅ Conception validée et poussée : docs/conception/<nom>.md — type: feature|bug — titre: <H1>
+   Exécution : /morgan docs/conception/<nom>.md  (autonome)  ou  skill john  (interactif)
 ```
 
 ## Red Flags — STOP et corriger

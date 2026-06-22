@@ -24,7 +24,7 @@ Quand un argument ressemble à une clé de ticket (`PROJ-123`), Sarah s'exécute
 | Phase du cycle | Action JIRA |
 |----------------|-------------|
 | 3.2 — chuck présente le design (GATE) | `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION VALIDATION"` |
-| 3.2 — design **validé** par l'utilisateur | `<HELPERS>/jira-attach.sh <KEY> docs/<nom>.md` (+ maquette éventuelle) ; `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION OK" --comment "design validé"` |
+| 3.2 — design **validé** par l'utilisateur | `<HELPERS>/jira-attach.sh <KEY> docs/conception/<nom>.md` (+ maquette éventuelle) ; `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION OK" --comment "design validé"` |
 | 3.2 — design **refusé** | `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION"` (itérer dans chuck) |
 | 3.3 — lancement morgan/john | **garde** : ne lancer que si statut == `CONCEPTION OK` ; puis `<HELPERS>/jira-transition.sh <KEY> "EN COURS"`. Passer la clé du ticket à morgan via ses `INSTRUCTIONS` (préfixer branche/MR par `<KEY>`). |
 | 3.3 — MR créée | `<HELPERS>/jira-transition.sh <KEY> EXAMINER --comment "MR : <url>"` |
@@ -114,14 +114,14 @@ But : produire une spécification actionnable + plan TDD, **sans écrire de code
 
 - Invoquer le **skill `chuck`**. Il possède l'exploration approfondie et le brainstorming complet — le laisser dérouler ses étapes 1-2, ne pas les dupliquer depuis 3.1.
 
-→ **GATE** : `chuck` produit son document de conception `.md` et le fait valider (ne pas court-circuiter son HARD-GATE). Capter sa **ligne de passation** (`✅ Conception validée : docs/<nom>.md — type: feature|bug`) : en extraire le **chemin `.md`** et le **type**, qui pilotent la phase suivante (le `.md`, jamais la maquette `.mockup.html`).
+→ **GATE** : `chuck` produit son document de conception `.md` et le fait valider (ne pas court-circuiter son HARD-GATE). Capter sa **ligne de passation** (`✅ Conception validée : docs/conception/<nom>.md — type: feature|bug`) : en extraire le **chemin `.md`** et le **type**, qui pilotent la phase suivante (le `.md`, jamais la maquette `.mockup.html`).
 
 ### 3.3 — Implémentation (autonome)
 
 But : implémenter la conception validée, en TDD, jusqu'à la merge request.
 
-- **Pré-requis avant le dispatch — commiter et pousser la conception.** Le worktree de morgan est créé fresh depuis `origin/main` : il ne verra le `.md` de conception que s'il est **déjà commité et poussé**. Donc, **avant** d'invoquer morgan, vérifier que `docs/<nom>.md` est commité+poussé ; sinon le commiter et le pousser (`git add docs/<nom>.md && git commit -m "docs(conception): <sujet>" && git push`). Morgan se base sur le **fichier**, jamais sur du contenu inliné.
-- Invoquer le **skill `morgan docs/<nom>.md`** avec le **chemin** `.md` capté en 3.2. Il crée la branche (dérivée du titre H1), implémente phase par phase en TDD, vérifie avec preuves fraîches, push et ouvre la MR. Pour un bug, le plan suit la structure régression→fix→non-régression définie par chuck.
+- **Pré-requis avant le dispatch — commiter et pousser la conception.** Le worktree de morgan est créé fresh depuis `origin/main` : il ne verra le `.md` de conception que s'il est **déjà commité et poussé**. Donc, **avant** d'invoquer morgan, vérifier que `docs/conception/<nom>.md` est commité+poussé ; sinon le commiter et le pousser (`git add docs/conception/<nom>.md && git commit -m "docs(conception): <sujet>" && git push`). Morgan se base sur le **fichier**, jamais sur du contenu inliné.
+- Invoquer le **skill `morgan docs/conception/<nom>.md`** avec le **chemin** `.md` capté en 3.2. Il crée la branche (dérivée du titre H1), implémente phase par phase en TDD, vérifie avec preuves fraîches, push et ouvre la MR. Pour un bug, le plan suit la structure régression→fix→non-régression définie par chuck.
 - **Si morgan s'arrête en signalant le document de conception absent** (`⛔ Document de conception absent du worktree`) : c'est que le `.md` n'était pas sur `origin/main`. Le **commiter + pousser**, puis **relancer morgan** sur le même chemin. Ne pas lui passer le contenu en repli.
 
 > **Repli git/MR bloqué (sandbox worktree).** Morgan tourne en sous-agent worktree isolé ; le sandbox lui **refuse souvent** `git commit`/`push`/`glab`/`gh`. Dans ce cas Morgan rend un diff vérifié sans pousser. **C'est alors à Sarah (thread principal) de finaliser le git dans le worktree** : créer la branche préfixée par la clé du ticket, **restaurer le bruit de formatage non lié** (`git restore -- . ':(exclude)…'`), stager uniquement les fichiers pertinents, committer, push, puis créer la MR (`glab`/`gh`). Le `.md` de conception est déjà sur `origin/main` (commité avant le dispatch, cf. pré-requis ci-dessus) et donc déjà présent dans le worktree de morgan — inutile de le rajouter.
