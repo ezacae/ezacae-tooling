@@ -27,10 +27,11 @@ AUCUN code, AUCUN scaffolding, AUCUNE implementation tant que la conception n'es
 | **brainstorming** | Étapes 1-2 | Explorer le contexte, poser les questions une par une, proposer 2-3 approches avec trade-offs. Pas de conception sans exploration. |
 | **writing-plans** | Étape 7 | Plan bite-sized (2-5 min/tâche), chemins exacts, code complet, TDD obligatoire. Pas de placeholders. |
 | **systematic-debugging** | Étape 1 (si bug) | Quand le type est une **correction de bug** : reproduire, isoler la cause racine AVANT de concevoir le fix. Pas de fix au jugé. |
+| **ui-ux-pro-max** | Étape 5 | Invoquer `ui-ux-pro-max:ui-ux-pro-max` avant la maquette HTML — génère palette, typographie et style adaptés au produit. |
 
 > **Chuck est le propriétaire de l'exploration.** Si l'orchestrateur `/sarah` a déjà cadré le besoin en amont, ne pas redemander ce qui est tranché — mais l'exploration du code (étape 1) reste de la responsabilité de chuck.
 
-**REQUIRED BACKGROUND:** `superpowers:brainstorming` et `superpowers:writing-plans` pour les disciplines générales. Ce skill les adapte au contexte de l'application.
+**REQUIRED BACKGROUND:** `superpowers:brainstorming` et `superpowers:writing-plans` pour les disciplines générales. `ui-ux-pro-max:ui-ux-pro-max` pour les fonctionnalités avec interface. Ce skill les adapte au contexte de l'application.
 
 ## Sources de vérité
 
@@ -151,6 +152,15 @@ Lister les fichiers à créer/modifier **par couche, selon la structure de la st
 - États : chargement, vide, erreur
 - Palette / design tokens du projet — voir `CLAUDE.md`
 - Maquette HTML **annexe** — voir `skills/chuck/mockup-guidelines.md`. C'est un artefact visuel séparé (`docs/conception/<nom>.mockup.html`), **référencé depuis le document de conception**. Ce n'est PAS le document de conception : le `.md` reste la source unique du plan, du modèle de données et de l'architecture.
+
+**Avant de produire la maquette — design system via `ui-ux-pro-max` :**
+
+1. Invoquer le skill `ui-ux-pro-max:ui-ux-pro-max`. Le skill fournit son répertoire de base (`<base_dir>`) lors de l'invocation.
+2. Générer le design system avec la commande fournie par le skill :
+   ```bash
+   python3 <base_dir>/scripts/search.py "<type_produit> <mots_clés_du_contexte>" --design-system -p "<Nom du projet>"
+   ```
+3. Utiliser la palette, la typographie et le style retournés comme source de vérité pour la maquette HTML.
 
 ### 6. Risques & contraintes
 
