@@ -1,7 +1,7 @@
 {
   "name": "ezacae-doc",
-  "description": "Outillage documentaire ezacae : orchestrateur Mike (PO/CTO) et commandes de rédaction (vision produit, personas, processus) avec les subagents doc-writer et stack-writer.",
-  "version": "0.2.0",
+  "description": "Outillage documentaire ezacae : orchestrateur Mike (PO/CTO) et commandes de rédaction (vision produit, personas, processus) avec les subagents doc-writer et stack-writer. Générateur mécanique de mkdocs.yml (scripts/gen-mkdocs.sh) fiabilisant la conversion Markdown → HTML, invoqué par les commandes Mike via ${CLAUDE_PLUGIN_ROOT}.",
+  "version": "0.3.0",
   "author": {
     "name": "ezacae",
     "email": "simon@ezacae.com"

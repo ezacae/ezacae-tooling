@@ -49,21 +49,17 @@ Questions à poser uniquement si le contexte ne suffit pas :
 - Sinon → `personas.md` à la racine
 - Si le fichier existe et que la mise à jour est partielle : modifier uniquement les types concernés, conserver les autres
 
-## Étape 4b — Mise à jour de mkdocs.yml
+## Étape 4b — Régénération de mkdocs.yml (mécanique)
 
-Lister les fichiers `.md` existants dans `docs/` et mettre à jour (ou créer) `mkdocs.yml` à la racine du projet pour que la navigation reflète tous les fichiers existants.
+Régénérer `mkdocs.yml` en exécutant le générateur du plugin ezacae-doc — **jamais** en écrivant le YAML à la main. `${CLAUDE_PLUGIN_ROOT}` est substitué par Claude Code au moment de l'exécution ; l'utiliser tel quel, en passant la racine du projet (défaut : répertoire courant) :
 
-**Correspondance dossier → section, fichier → label :**
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/gen-mkdocs.sh" "<racine du projet>"
+```
 
-| Dossier | Section | Fichiers → Labels |
-|---------|---------|-------------------|
-| `00_vision/` | Vision | `vision.md` → "Vision produit" |
-| `01_product/` | Produit | `personas.md` → "Personas", `processus.md` → "Processus métier", `fonctions.md` → "Fonctionnalités" |
-| `02_architecture/` | Architecture | `architecture.md` → "Architecture stack", `auth.md` → "Authentification", `ecrans-ui.md` → "Écrans & navigation", `interactions-ui.md` → "Interactions UI", `fonctions-techniques.md` → "Fonctions techniques" |
-| `03_donnees/` | Données | `bdd.md` → "Modèle de données", `api-endpoints.md` → "API endpoints" |
-| `04_exploitation/` | Exploitation | `variables-env.md` → "Variables d'environnement", `deploiement.md` → "Déploiement", `tests.md` → "Tests & qualité" |
+Si `${CLAUDE_PLUGIN_ROOT}` apparaît non substitué (chemin littéral), le **signaler** au lieu d'écrire le YAML à la main.
 
-Structure : `site_name: "Documentation — [Nom du projet]"`, `docs_dir: docs`, `theme.name: material`, `nav` avec uniquement les fichiers existants. Chemins dans `nav` relatifs à `docs_dir`. N'inclure une section que si au moins un fichier du dossier existe.
+Le script scanne `docs/`, (re)crée `mkdocs.yml` à la racine et **garantit sa présence** — sans ce fichier, pas de conversion Markdown → HTML. Il porte la table de correspondance dossier → section / fichier → label (source unique de vérité) et reflète l'ajout comme la suppression de `.md`. Si le script échoue (pas de `docs/`, aucun `.md`), le signaler au lieu de contourner.
 
 ## Étape 5 — Présenter
 
