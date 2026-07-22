@@ -130,37 +130,17 @@ Après retour des sous-agents, vérifier :
 
 Si le changement crée un nouveau document, mettre à jour `.claude/doc-manifest.md` en passant le statut de `⬜ à créer` à `✅ actif`.
 
-### 5.4b Mise à jour de mkdocs.yml
+### 5.4b Régénération de mkdocs.yml (mécanique)
 
-Lister les fichiers `.md` existants dans `docs/` :
+Régénérer `mkdocs.yml` en exécutant le générateur du plugin ezacae-doc — **jamais** en écrivant le YAML à la main. `${CLAUDE_PLUGIN_ROOT}` est substitué par Claude Code au moment de l'exécution ; l'utiliser tel quel :
 
 ```bash
-find $DOC_REPO_PATH/docs/ -name "*.md" | sort
+"${CLAUDE_PLUGIN_ROOT}/scripts/gen-mkdocs.sh" "$DOC_REPO_PATH"
 ```
 
-Générer (ou régénérer) le fichier `mkdocs.yml` à la racine `$DOC_REPO_PATH`. Si absent, le créer.
+Si `${CLAUDE_PLUGIN_ROOT}` apparaît non substitué (chemin littéral), le **signaler** au lieu d'écrire le YAML à la main.
 
-**Structure attendue de `mkdocs.yml` :**
-- `site_name` : `"Documentation — [Nom du projet]"` (nom extrait de `.claude/CLAUDE.md`)
-- `docs_dir` : `docs`
-- `theme.name` : `material`
-- `nav` : uniquement les fichiers `.md` existants, organisés par section
-
-**Correspondance dossier → section, fichier → label :**
-
-| Dossier | Section | Fichiers → Labels |
-|---------|---------|-------------------|
-| `00_vision/` | Vision | `vision.md` → "Vision produit" |
-| `01_product/` | Produit | `personas.md` → "Personas", `processus.md` → "Processus métier", `fonctions.md` → "Fonctionnalités" |
-| `02_architecture/` | Architecture | `architecture.md` → "Architecture stack", `auth.md` → "Authentification", `ecrans-ui.md` → "Écrans & navigation", `interactions-ui.md` → "Interactions UI", `fonctions-techniques.md` → "Fonctions techniques" |
-| `03_donnees/` | Données | `bdd.md` → "Modèle de données", `api-endpoints.md` → "API endpoints" |
-| `04_exploitation/` | Exploitation | `variables-env.md` → "Variables d'environnement", `deploiement.md` → "Déploiement", `tests.md` → "Tests & qualité" |
-
-**Règles :**
-- N'inclure dans `nav` que les fichiers qui existent réellement dans `docs/`
-- N'inclure une section que si au moins un fichier du dossier existe
-- Chemins dans `nav` relatifs à `docs_dir` (ex: `00_vision/vision.md`)
-- Pour un fichier `.md` absent du tableau ci-dessus : utiliser le nom sans extension (majuscule initiale) comme label, dans la section de son dossier parent
+Le script scanne `docs/`, (re)crée `mkdocs.yml` à la racine `$DOC_REPO_PATH` et **garantit sa présence** — sans ce fichier, la conversion Markdown → HTML ne se fait pas. Il porte la table de correspondance dossier → section / fichier → label (source unique de vérité) et couvre création **comme** suppression de `.md` par régénération complète idempotente. En cas d'échec du script (pas de `docs/`, aucun `.md`), le signaler au lieu de contourner.
 
 ### 5.5 Commit et push
 
