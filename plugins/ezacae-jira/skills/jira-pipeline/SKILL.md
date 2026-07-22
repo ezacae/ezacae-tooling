@@ -130,14 +130,14 @@ Procédure :
    Le worklog est géré par le helper — **aucun appel MCP n'est requis** pour ce cas.
 3. **Seul cas justifiant le MCP** : un autre champ d'écran custom obligatoire que le helper ne sait pas passer. Lire `getTransitionsForJiraIssue(..., expand="transitions.fields")` et fournir le champ via `transitionJiraIssue` (`fields`). La garde de statut s'applique quand même (hook `jira-guard.sh`).
 
-### Auto-autorisation des actions JIRA (hook `PreToolUse`)
+### Permissions JIRA — helpers auto-autorisés, MCP redirigé (hook `PreToolUse`)
 
-Le plugin ezacae-jira **auto-autorise toute action JIRA sans validation manuelle** : aucun prompt de permission n'est demandé, que l'opération passe par les helpers REST **ou** par le MCP. C'est géré par les hooks `PreToolUse` déclarés dans `hooks/hooks.json` :
+Le plugin ezacae-jira rend le « zéro MCP » **déterministe** via les hooks `PreToolUse` déclarés dans `hooks/hooks.json` :
 
-- `jira-allow-bash.sh` capte le Bash et renvoie **allow** pour les commandes invoquant un helper `jira-*.sh` du plugin (`jira-get`, `jira-comment`, `jira-transition`, `jira-edit`, `jira-attach`, `jira-download`). Tout autre Bash suit le flux de permission normal — on n'auto-autorise jamais du Bash arbitraire.
-- `jira-guard.sh` capte tous les outils MCP JIRA (matcher large) et renvoie **allow** par défaut — sauf pour les transitions, qui passent par la garde de statut ci-dessous.
+- `jira-allow-bash.sh` capte le Bash et renvoie **allow** pour les commandes invoquant un helper `jira-*.sh` du plugin (`jira-get`, `jira-comment`, `jira-transition`, `jira-edit`, `jira-attach`, `jira-download`, `jira-create`, `jira-search`, `jira-projects`, `jira-link`). Tout autre Bash suit le flux de permission normal — on n'auto-autorise jamais du Bash arbitraire.
+- `jira-guard.sh` capte tous les outils MCP JIRA (matcher large) et **redirige** vers le helper équivalent (`deny` + nom exact du helper à utiliser) toute opération qui en possède un : `getJiraIssue`, `addCommentToJiraIssue`, `editJiraIssue`, `createJiraIssue`, `searchJiraIssuesUsingJql`, `createIssueLink`, `getVisibleJiraProjects`, `getJiraProjectIssueTypesMetadata`, `getJiraIssueTypeMetaWithFields`. Si `.claude/jira.env` manque, le `deny` **guide pas à pas** la création du fichier (token API, `cp` du modèle) — jamais de dégradation silencieuse vers le MCP. Seul `transitionJiraIssue` échappe à la redirection (exception d'écran custom, §5) et passe par la garde de statut. Les rares outils sans helper (`getTransitionsForJiraIssue`, `addWorklog`, `getAccessibleAtlassianResources`) restent auto-autorisés.
 
-> C'est la voie REST (Bash auto-autorisé) qui rend le pipeline réellement **non-interactif** de bout en bout, y compris dans les contextes où le MCP n'est pas disponible. Si un agent constate encore un prompt sur une action JIRA, c'est qu'il passe par le MCP dans un contexte non capté : basculer sur le helper `jira-*.sh` équivalent.
+> Un `deny` de hook ne peut pas être contourné par l'agent : c'est ce qui **force** réellement l'usage des helpers, là où une consigne écrite (« privilégier les helpers ») était ignorée. Si un appel MCP redirigé est refusé, suivre l'instruction du `deny` (le helper `jira-*.sh` nommé). Couverture vérifiée par `tests/test_jira_guard.sh`.
 
 ### Garde de statut automatique (hook `PreToolUse`)
 
