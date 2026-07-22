@@ -70,7 +70,7 @@ Conséquence : c'est **le statut qui décide du point d'entrée**. Sur un ticket
 
 Ces gardes ne reposent pas que sur la discipline des agents : deux **hooks Claude Code** (déclarés dans `hooks/hooks.json` du plugin ezacae-jira) les rendent déterministes —
 - **`SessionStart`** (`hooks/session-start.sh`) : sync Git + vérification des credentials JIRA + chemin des helpers, injectés en contexte (remplace les Phase 0 bash).
-- **`PreToolUse`** (`hooks/jira-guard.sh` + `hooks/jira-allow-bash.sh`) : **auto-autorise les actions JIRA** et **bloque toute transition hors séquence** du pipeline (filet de sécurité actif uniquement sur les tickets déjà dans un statut du pipeline). Voir le skill `jira-pipeline` §5.
+- **`PreToolUse`** (`hooks/jira-guard.sh` + `hooks/jira-allow-bash.sh`) : auto-autorise les helpers `jira-*.sh` et **redirige vers eux toute opération MCP disposant d'un helper** (lecture, commentaire, édition, création, recherche, projets, liens → `deny` + helper à utiliser ; si `.claude/jira.env` manque, le `deny` guide sa création). Rend le « zéro MCP » déterministe. `transitionJiraIssue` échappe à la redirection (exception d'écran custom) et passe par la **garde de statut** qui bloque toute transition hors séquence. Voir le skill `jira-pipeline` §5.
 
 ---
 
