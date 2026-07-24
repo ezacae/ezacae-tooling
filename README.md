@@ -1,6 +1,41 @@
 # ezacae-claude-tooling
 
-Marketplace interne ezacae de plugins Claude Code.
+Marketplace interne ezacae de plugins Claude Code. C'est ici que vit l'outillage IA commun distribué aux postes de l'équipe : conventions globales, pipeline JIRA, agents documentaires (Mike) et agents de développement (Sarah, Chuck, John, Morgan).
+
+> **Contexte — chantier harnais IA ezacae.** Ce dépôt reflète l'organisation **actuelle** de l'outillage, pendant le cadrage du socle harnais. Les besoins sont validés (CDC v2 du 09/07) et le choix du socle est en cours (comparatif des 5 pistes, recommandation D′ : « les plugins sont un bon canal de livraison, pas un socle ») — voir le dépôt [`harness-doc`](https://gitlab.com/ezacae/harness-doc). Selon la piste retenue, ce dépôt pourra être déménagé, remplacé ou archivé. En attendant, il reste la référence en vigueur.
+
+## Démarrage rapide (nouveau dev)
+
+**1. Installer les plugins** (une fois par poste — détail plus bas) :
+
+```
+/plugin marketplace add <URL_GITLAB>/ezacae-claude-tooling
+/plugin install ezacae-base@ezacae-claude-tooling
+/plugin install ezacae-jira@ezacae-claude-tooling
+/plugin install ezacae-doc@ezacae-claude-tooling
+/plugin install ezacae-dev@ezacae-claude-tooling
+```
+
+**2. Préparer le projet** : dans le repo où tu travailles, copier `jira.env.example` en `.claude/jira.env`, le renseigner, vérifier qu'il est gitignoré (voir « Pré-requis côté projet client »).
+
+**3. Développer une fonctionnalité ou corriger un bug — une seule commande à retenir : `/mike`.** Tout travail de dev part d'un ticket JIRA et passe par le pipeline, y compris une petite correction. Tu n'as pas à enchaîner les étapes ni à connaître les agents un par un : tu lances `/mike`, puis tu valides à chaque gate.
+
+| Point de départ | Commande | Ce qui se passe |
+|---|---|---|
+| J'ai un ticket JIRA (statut `NOUVEAU`) | `/mike <KEY>` | Mike cadre le besoin, met à jour la doc, passe le ticket en `CONCEPTION` et enchaîne automatiquement sur le développement |
+| Je n'ai pas de ticket | `/mike "ajoute la fonctionnalité X"` | Mike crée le ticket dans le bon projet, puis déroule le pipeline |
+
+> **Mike n'est pas réservé à la doc.** C'est le point d'entrée unique pour **tout** le dev ezacae. Il orchestre en interne le cycle complet, avec un **gate de validation entre chaque phase** — aucun code n'est écrit tant que la conception n'est pas validée par toi :
+>
+> ```
+> conception (tu valides)  →  implémentation (branche + tests + MR)  →  revue de code  →  doc finale
+> ```
+>
+> Le statut du ticket avance à chaque étape et les livrables sont attachés automatiquement.
+
+**Règle ezacae non négociable** : rien n'est conçu tant que le besoin n'est pas validé, rien n'est livré tant que la revue n'est pas faite. Les gates sont matérialisés par des états système (statut JIRA, merge), pas par une consigne ignorable — c'est vrai pour tout dev, quelle que soit sa taille.
+
+Les agents qui exécutent ce cycle (Sarah l'orchestrateur, puis les phases conception / implémentation / revue) sont détaillés dans « Plugins » ci-dessous. En usage normal tu n'as pas à les invoquer par leur nom : `/mike` s'en charge.
 
 ## Plugins
 
@@ -8,10 +43,22 @@ Marketplace interne ezacae de plugins Claude Code.
 |--------|---------|--------|
 | `ezacae-base` | Instructions globales ezacae (`conventions.md`) injectées en contexte à chaque session via un hook SessionStart — source unique d'équipe, remplace le copier-coller dans chaque `~/.claude/CLAUDE.md` | `0.1.0` |
 | `ezacae-jira` | Infra commune du pipeline JIRA : skill `jira-pipeline`, helpers REST (`jira-attach`/`jira-download`), hooks `SessionStart` (pré-checks Git/JIRA + chemin des helpers), **auto-autorisation des actions JIRA** (aucune validation manuelle) et garde de statut `PreToolUse` | `0.2.0` |
-| `ezacae-doc` | Orchestrateur Mike (PO/CTO) + commandes vision / personas / processus, avec les subagents `doc-writer` et `stack-writer` | `0.2.0` |
-| `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `john`, `morgan`, `grill-me`, `handoff` ; agents **auto-suffisants** `morgan`/`john` + `code-simplifier`, `technical-design-generator` ; hook SessionStart injectant la racine du plugin (conventions de stack) | `0.2.0` |
+| `ezacae-doc` | Orchestrateur Mike (PO/CTO) + commandes vision / personas / processus, avec les subagents `doc-writer` et `stack-writer` | `0.3.0` |
+| `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `john`, `morgan`, `grill-me`, `handoff` ; agents **auto-suffisants** `morgan`/`john` + `code-simplifier`, `technical-design-generator` ; hook SessionStart injectant la racine du plugin (conventions de stack) | `0.3.0` |
 
 `ezacae-doc` et `ezacae-dev` dépendent de `ezacae-jira` **uniquement** pour le mode pipeline JIRA (`/mike <KEY>`, `/sarah <KEY>`). Hors pipeline, les commandes fonctionnent seules.
+
+**Rôle de chaque agent d'`ezacae-dev`** (par fonction — tu ne les invoques pas directement en usage normal, `/mike` les orchestre) :
+
+| Agent | Rôle |
+|---|---|
+| Sarah | Orchestrateur du cycle dev : séquence les phases et pose un gate de validation entre chacune |
+| Chuck | Phase **conception** : produit et fait valider le design technique avant tout code |
+| Morgan | Phase **implémentation en mode autonome** : dispatché en sous-agent (contexte isolé), déroule branche + TDD + MR sans interaction |
+| John | Phase **implémentation en mode interactif** : même travail dans le thread principal, peut poser des questions en cours de route |
+| `code-simplifier`, `technical-design-generator` | Agents de support (revue de simplification, génération de conception technique) |
+
+> Morgan et John font le **même travail d'implémentation** ; ils diffèrent par le mode (autonome vs interactif). Cette distinction et le nommage sont susceptibles d'être simplifiés dans le cadre du chantier harnais (voir bandeau en tête).
 
 ### Pourquoi `ezacae-dev` embarque la discipline dans les agents
 
@@ -100,4 +147,17 @@ ezacae-claude-tooling/
         └── agents/       (morgan, john auto-suffisants ; code-simplifier ; technical-design-generator)
 ```
 
+Le dépôt contient aussi `deploy/jira-watcher/` (service de veille JIRA, README dédié dans le dossier) et `docs/` (conceptions, site MkDocs).
+
 Conventions de contribution et règle de bump de version : voir [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Migration depuis `~/.claude/` (install.sh)
+
+Pour un poste encore configuré via le script `install.sh` du dépôt `referentiel-documentaire-ezacae` : suivre la checklist [`MIGRATION.md`](MIGRATION.md). Objectif clé : **éviter le doublon** — une commande/skill ne doit jamais exister à la fois dans `~/.claude/` et dans un plugin.
+
+## Dépôts liés
+
+| Dépôt | Rôle |
+|---|---|
+| [`referentiel-documentaire-ezacae`](https://gitlab.com/ezacae/referentiel-documentaire-ezacae) | Index documentaire des projets + templates de démarrage projet + distribution historique `install.sh` (dépréciée) |
+| [`harness-doc`](https://gitlab.com/ezacae/harness-doc) | Chantier harnais : cahiers des charges, comparatif des pistes de socle, décisions |
