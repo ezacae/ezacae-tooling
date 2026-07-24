@@ -1,7 +1,7 @@
 ---
 name: doc-writer
 model: claude-haiku-4-5-20251001
-description: Met à jour un document produit (vision.md, personas.md, processus.md) selon des instructions précises fournies par l'orchestrateur /doc. Respecte strictement les conventions ezacae.
+description: Met à jour un document produit (vision.md, personas.md, processus.md) selon des instructions précises fournies par l'orchestrateur /mike-po. Respecte strictement les conventions ezacae.
 tools:
   - Read
   - Write

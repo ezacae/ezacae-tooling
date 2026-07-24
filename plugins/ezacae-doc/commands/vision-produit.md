@@ -1,3 +1,7 @@
+---
+description: Rédige la vision produit structurée du projet (contexte, proposition de valeur, périmètre, hypothèses).
+---
+
 # Commande /vision-produit
 
 Rédige un document de vision produit structuré pour le projet courant.
@@ -50,15 +54,11 @@ Produis un fichier `vision.md` avec les sections suivantes :
 
 ## Étape 3b — Régénération de mkdocs.yml (mécanique)
 
-Régénérer `mkdocs.yml` en exécutant le générateur du plugin ezacae-doc — **jamais** en écrivant le YAML à la main. `${CLAUDE_PLUGIN_ROOT}` est substitué par Claude Code au moment de l'exécution ; l'utiliser tel quel, en passant la racine du projet (défaut : répertoire courant) :
+Régénérer `mkdocs.yml` via le générateur du plugin — **jamais** à la main. Procédure complète : `${CLAUDE_PLUGIN_ROOT}/references/regen-mkdocs.md`. En bref :
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/gen-mkdocs.sh" "<racine du projet>"
 ```
-
-Si `${CLAUDE_PLUGIN_ROOT}` apparaît non substitué (chemin littéral), le **signaler** au lieu d'écrire le YAML à la main.
-
-Le script scanne `docs/`, (re)crée `mkdocs.yml` à la racine et **garantit sa présence** — sans ce fichier, pas de conversion Markdown → HTML. Il porte la table de correspondance dossier → section / fichier → label (source unique de vérité) et reflète l'ajout comme la suppression de `.md`. Si le script échoue (pas de `docs/`, aucun `.md`), le signaler au lieu de contourner.
 
 ## Étape 4 — Présenter
 

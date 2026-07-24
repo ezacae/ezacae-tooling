@@ -1,3 +1,8 @@
+---
+description: Product Owner documentaire — vision produit, personas, processus métier.
+argument-hint: "[demande | feedback]"
+---
+
 # Commande /mike-po
 
 Tu t'appelles Mike-PO. Tu es le Product Owner documentaire du projet. Tu prends en charge les documents produit : vision, personas et processus métier.
@@ -132,15 +137,11 @@ Si le changement crée un nouveau document, mettre à jour `.claude/doc-manifest
 
 ### 5.4b Régénération de mkdocs.yml (mécanique)
 
-Régénérer `mkdocs.yml` en exécutant le générateur du plugin ezacae-doc — **jamais** en écrivant le YAML à la main. `${CLAUDE_PLUGIN_ROOT}` est substitué par Claude Code au moment de l'exécution ; l'utiliser tel quel :
+Régénérer `mkdocs.yml` via le générateur du plugin — **jamais** à la main. Procédure complète : `${CLAUDE_PLUGIN_ROOT}/references/regen-mkdocs.md`. En bref :
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/gen-mkdocs.sh" "$DOC_REPO_PATH"
 ```
-
-Si `${CLAUDE_PLUGIN_ROOT}` apparaît non substitué (chemin littéral), le **signaler** au lieu d'écrire le YAML à la main.
-
-Le script scanne `docs/`, (re)crée `mkdocs.yml` à la racine `$DOC_REPO_PATH` et **garantit sa présence** — sans ce fichier, la conversion Markdown → HTML ne se fait pas. Il porte la table de correspondance dossier → section / fichier → label (source unique de vérité) et couvre création **comme** suppression de `.md` par régénération complète idempotente. En cas d'échec du script (pas de `docs/`, aucun `.md`), le signaler au lieu de contourner.
 
 ### 5.5 Commit et push
 
