@@ -1,6 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "ezacae-claude-tooling",
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
   "description": "Marketplace interne ezacae — plugins Claude Code pour le conseil et le développement low-code / vibe coding.",
   "owner": {
     "name": "Simon - ezacae",
