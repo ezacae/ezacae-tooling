@@ -20,18 +20,13 @@ AUCUN code, AUCUN scaffolding, AUCUNE implementation tant que la conception n'es
 - Exécution d'une conception existante → utiliser `/morgan <chemin>`
 - Bug trivial (typo, CSS, config) ne nécessitant pas de conception
 
-## Superpowers intégrés
+## Méthode : Superpowers, invoquée — jamais recopiée
 
-| Superpower | Intégration | Règle |
-|---|---|---|
-| **brainstorming** | Étapes 1-2 | Explorer le contexte, poser les questions une par une, proposer 2-3 approches avec trade-offs. Pas de conception sans exploration. |
-| **writing-plans** | Étape 7 | Plan bite-sized (2-5 min/tâche), chemins exacts, code complet, TDD obligatoire. Pas de placeholders. |
-| **systematic-debugging** | Étape 1 (si bug) | Quand le type est une **correction de bug** : reproduire, isoler la cause racine AVANT de concevoir le fix. Pas de fix au jugé. |
-| **ui-ux-pro-max** | Étape 5 | Invoquer `ui-ux-pro-max:ui-ux-pro-max` avant la maquette HTML — génère palette, typographie et style adaptés au produit. |
+Chuck **n'écrit pas** la méthodologie générale (exploration, questionnement, structure de plan, debug). Il l'**invoque** (tool Skill) au moment voulu depuis le plugin `superpowers` — couche 1 du harnais, toujours à jour — et ne garde que la **colle ezacae** : quoi produire, dans les termes de la stack, avec la convention de doc et le HARD-GATE. Les skills à invoquer sont indiqués **à chaque étape** ci-dessous (`superpowers:brainstorming`, `:systematic-debugging`, `:writing-plans`, `ui-ux-pro-max:ui-ux-pro-max`).
+
+**Règle :** invoquer **réellement** le skill quand l'étape l'exige — ne jamais paraphraser sa méthode ici. Un skill Superpowers absent est signalé au démarrage par le hook `check-superpowers` ; l'installer alors : `claude plugin install superpowers@claude-plugins-official`.
 
 > **Chuck est le propriétaire de l'exploration.** Si l'orchestrateur `/sarah` a déjà cadré le besoin en amont, ne pas redemander ce qui est tranché — mais l'exploration du code (étape 1) reste de la responsabilité de chuck.
-
-**REQUIRED BACKGROUND:** `superpowers:brainstorming` et `superpowers:writing-plans` pour les disciplines générales. `ui-ux-pro-max:ui-ux-pro-max` pour les fonctionnalités avec interface. Ce skill les adapte au contexte de l'application.
 
 ## Sources de vérité
 
@@ -76,31 +71,23 @@ digraph chuck_flow {
 }
 ```
 
-### 1. Explorer le contexte (brainstorming)
+### 1. Explorer le contexte
 
-**D'abord détecter la stack et explorer le code silencieusement :**
+**Colle ezacae — détecter la stack et explorer le code (silencieux) :**
 
 - **Détecter la stack** (procédure du skill `john`) et charger `skills/john/stacks/<stack>.md` + le `CLAUDE.md` du projet.
-- Lire les fichiers, modules, composants, types liés à la demande
-- Vérifier les commits récents sur la zone concernée
-- Identifier les patterns existants et ce qui est réutilisable
+- Lire les fichiers, modules, composants, types liés à la demande ; vérifier les commits récents sur la zone ; repérer les patterns existants réutilisables.
 
-**Puis comprendre le besoin — une question à la fois :**
+**Comprendre le besoin — invoquer `superpowers:brainstorming`** (questionnement collaboratif, une exploration à la fois : ne pas la redire ici). Chuck y ajoute :
 
 - Déterminer le type : **nouvelle fonctionnalité** | **modification** | **correction de bug**
-- Préférer les questions à choix multiples
 - Identifier les personas impactés (cf. `CLAUDE.md` / docs produit du projet)
-- Lister les exigences fonctionnelles et non fonctionnelles
 
-**Si le type est une correction de bug (`systematic-debugging`) :**
+**Si correction de bug — invoquer `superpowers:systematic-debugging`** (reproduction + isolation de la cause racine avant tout fix). La conception ezacae décrit alors **la cause racine**, **le correctif** et **le test de régression** qui échoue aujourd'hui — pas une architecture greenfield.
 
-- **Reproduire** : étapes exactes, comportement observé vs attendu
-- **Isoler la cause racine** : tracer le flux, comparer à du code similaire qui fonctionne. Ne pas concevoir un fix tant que la cause n'est pas identifiée.
-- La conception décrit alors **la cause racine**, **le correctif** et **le test de régression** qui échoue aujourd'hui — pas une architecture greenfield.
+### 2. Proposer des approches
 
-### 2. Proposer des approches (brainstorming)
-
-Proposer 2-3 approches avec trade-offs, **exprimées dans les termes de la stack détectée**. Recommandation argumentée. Attendre validation.
+**Invoquer à nouveau `superpowers:brainstorming`** pour cette phase (2-3 approches, trade-offs, recommandation argumentée, attente de validation — ne pas recopier sa méthode). Spécificité ezacae : approches **exprimées dans les termes de la stack détectée**.
 
 ```
 (exemple — stack Next.js)
@@ -218,13 +205,7 @@ Lister les fichiers à créer/modifier **par couche, selon la structure de la st
 - [ ] Commit
 ```
 
-**Exigences (writing-plans) :**
-
-- **Chemins de fichiers exacts** — pas de "dans le dossier approprié"
-- **TDD par tâche** — chaque tâche avec code commence par le test qui échoue
-- **Pas de placeholders** — pas de "TBD", "TODO", "ajouter la validation appropriée"
-- **Tâches bite-sized** — 2-5 minutes. Plus long → découper
-- **Commandes de vérification** avec sortie attendue
+**Exigences du plan — invoquer `superpowers:writing-plans`** (chemins exacts, TDD par tâche, pas de placeholders, tâches bite-sized 2-5 min, commandes de vérification avec sortie attendue). L'invoquer, ne pas recopier ses règles. Spécificité ezacae : phases et chemins **adaptés à la stack détectée** (`skills/john/stacks/<stack>.md`) + la variante bug ci-dessus.
 
 ### 8. Auto-review
 

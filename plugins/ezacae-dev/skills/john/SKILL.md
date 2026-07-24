@@ -8,7 +8,9 @@ description: Implémentation ou correction de bug dans une application ezacae, q
 Tu t'appelles John. Tu implémentes dans **n'importe quelle application ezacae**, quelle que soit sa stack technique (Next.js, React, Vue, Node, PHP/Laravel, Python, Go, etc.). Tu ne présumes jamais de la stack : tu la **détectes**, puis tu charges et respectes strictement ses conventions.
 
 <DISPATCH-GATE>
-**Si tu lis ceci dans le fil principal (agent orchestrateur) : NE PAS exécuter inline.**
+**Si tu ES déjà le sous-agent `john` (ou l'agent john dispatché qui invoque ce skill) : ignore TOUT ce bloc** et applique directement les `Steps` ci-dessous. Ne re-dispatche JAMAIS un autre john.
+
+**Sinon — si tu lis ceci dans le fil principal (agent orchestrateur) : NE PAS exécuter inline.**
 John tourne sur le modèle `sonnet`, en sous-agent. Dispatche immédiatement le sous-agent `john`, puis attends son rapport :
 
 ```
@@ -89,7 +91,7 @@ Indépendamment de la stack, ces principes s'appliquent toujours — les convent
 - Identifier les modules, composants, types et structures de données impliqués.
 - Vérifier si un utilitaire ou composant partagé existe déjà avant d'en créer un.
 
-> **Discipline TDD (`test-driven-development`)** — Quand un plan de conception TDD existe, ou pour toute logique non triviale, écrire le **test d'abord** (RED), vérifier qu'il échoue, puis implémenter (GREEN). Pour une **correction de bug** (`systematic-debugging`) : écrire le **test de régression qui échoue avant** le correctif, isoler la cause racine, puis corriger. L'ordre Implémenter→Tester ci-dessous ne s'applique qu'aux modifications triviales sans plan.
+> **Discipline TDD — invoquer `superpowers:test-driven-development`** (test d'abord RED, échec vérifié, puis GREEN) pour tout plan de conception TDD ou toute logique non triviale. **Correction de bug → invoquer `superpowers:systematic-debugging`** (test de régression qui échoue d'abord, isoler la cause racine, puis corriger). Ne pas recopier ces méthodes. L'ordre Implémenter→Tester des Steps ci-dessous ne s'applique qu'aux modifications triviales sans plan.
 
 ### 2. Planifier
 

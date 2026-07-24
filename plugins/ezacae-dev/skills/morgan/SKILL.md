@@ -26,20 +26,19 @@ AUCUNE modification de code tant que le document de conception n'est pas lu int�
 - Implémentation manuelle interactive → utiliser le skill `john`
 - Pas de document de conception → créer d'abord avec `/chuck`
 
-## Superpowers intégrés
+## Méthode : Superpowers, invoquée — jamais recopiée
 
-Non négociables :
+Morgan **n'écrit pas** la méthodologie (TDD, vérification, debug, clôture de branche). Il l'**invoque** (tool Skill) depuis le plugin `superpowers` — couche 1 du harnais, toujours à jour — au moment voulu, et ne garde que la **colle ezacae** : dispatch en worktree, détection de stack, conventions de code, garde du document de conception, templates MR, repli sandbox. Skills invoqués aux phases indiquées :
 
-| Superpower | Intégration | Règle |
-|---|---|---|
-| **test-driven-development** | Phase 3 | RED-GREEN-REFACTOR. Test d'abord, vérifier échec, implémenter minimum, vérifier passage. |
-| **verification-before-completion** | Phases 3, 4 | Preuve fraiche obligatoire. Run + output. Pas de "should pass", pas de "looks correct". |
-| **systematic-debugging** | Erreurs | Root cause d'abord, pas de guess-and-check. Investigation → pattern → hypothèse → fix. 3 échecs → escalader. |
-| **finishing-a-development-branch** | Phase 5 | Vérifier tests avant push. Détection environnement. Push + MR structurée. |
+- Phase 3 → `superpowers:test-driven-development`
+- Phases 3-4 → `superpowers:verification-before-completion`
+- Erreurs → `superpowers:systematic-debugging`
 
-**REQUIRED BACKGROUND:** `superpowers:test-driven-development`, `superpowers:verification-before-completion`, `superpowers:systematic-debugging`, `superpowers:finishing-a-development-branch`.
+(La clôture de branche reste **spécifique ezacae** — Phase 5 : push + MR non interactifs, pas le flux `finishing-a-development-branch` qui propose des options interactives inadaptées à un agent autonome.)
 
-**Conventions de code :** le skill `john` est la source de vérité. L'orchestrateur DOIT injecter **le contenu intégral de `john/SKILL.md`** dans le prompt du sous-agent — pas seulement CLAUDE.md. CLAUDE.md ne contient pas la liste des hooks/composants réutilisables, les règles de logging ni la checklist : sans `john`, le sous-agent les ignore.
+**Règle :** invoquer **réellement** le skill quand la phase l'exige — ne jamais paraphraser sa méthode ici. Un skill absent est signalé au démarrage par le hook `check-superpowers` (`claude plugin install superpowers@claude-plugins-official`).
+
+**Conventions de code :** le skill `john` est la source de vérité. Le sous-agent (qui dispose de tous les outils) **invoque le skill `john`** — l'invocation fournit sa base dir, d'où lire `stacks/<stack>.md`. `CLAUDE.md` du projet **prime toujours**.
 
 ## Entrées
 
@@ -69,7 +68,7 @@ En cas de conflit, **`CLAUDE.md` du projet prime**.
 
 ## Mode de dispatch — Sous-agent isolé
 
-**Morgan s'exécute TOUJOURS comme le sous-agent `morgan`, dans un worktree git isolé, sur le modèle `sonnet`.** Le sous-agent (`.claude/agents/morgan.md`) connaît déjà son process et ses sources de vérité — l'orchestrateur n'a donc qu'à lui transmettre la tâche.
+**Morgan s'exécute TOUJOURS comme le sous-agent `morgan`, dans un worktree git isolé, sur le modèle `sonnet`.** Le sous-agent (défini dans `plugins/ezacae-dev/agents/morgan.md`) connaît déjà son process et ses sources de vérité — l'orchestrateur n'a donc qu'à lui transmettre la tâche.
 
 L'orchestrateur doit :
 
@@ -186,46 +185,18 @@ digraph morgan_flow {
 
 ### Phase 3 — Implémentation TDD
 
-**Suivre le plan phase par phase, en TDD strict.**
+**Discipline TDD : invoquer `superpowers:test-driven-development`** (RED → GREEN → REFACTOR : test d'abord, échec vérifié, code minimal — ne pas la recopier ici). Suivre le plan phase par phase. Spécificités ezacae par phase :
 
-Pour chaque phase :
-
-1. **TaskUpdate** → `in_progress`
-
-2. **RED** — Écrire les tests (framework de test de la stack détectée) :
-   - Tests à l'emplacement conventionnel de la stack, en miroir du code
-   - Tester le comportement, pas l'implémentation
-   - Au moins un test d'intégration pour la première phase d'interface
-   - Exécuter la **commande de test de la stack** (voir `stacks/<stack>.md` ; ex. Next.js : `npm test -- --reporter=verbose <chemin>`) et **vérifier l'échec** (feature manquante, pas erreur de syntaxe)
-   - **Preuve obligatoire** : coller la sortie
-
-3. **GREEN** — Implémenter le minimum :
-   - Respecter les conventions du skill `john` et de `stacks/<stack>.md` (injectées intégralement dans le prompt du sous-agent)
-   - En cas de doute → relire `CLAUDE.md` ou `stacks/<stack>.md`
-
-4. **VERIFY GREEN** — Preuves fraiches : relancer la commande de test de la stack
-   - **Coller la sortie**. Si échec → debugging systématique (voir ci-dessous)
-   - Pas de "should pass" — **output ou rien**
-
-5. **REFACTOR** (si nécessaire) — puis re-vérifier
-
-6. **Vérification qualité** — lancer les commandes d'analyse statique / lint de la stack (ex. Next.js : `npm run typecheck && npm run lint`).
-   **Coller la sortie.** 0 erreur obligatoire.
-
-7. **Commit** (Conventional Commits) :
-   ```bash
-   git add <fichiers-et-tests-de-cette-phase>
-   git commit -m "feat(<scope>): <description courte>"
-   ```
-   - `git add` fichier par fichier, pas `-A`
-   - Tests et code dans le même commit
-   - Pas de fichiers sensibles (`.env`, credentials)
-
-8. **TaskUpdate** → `completed`
+1. **TaskUpdate** → `in_progress`.
+2. **Tests + code** selon le cycle TDD invoqué, aux conventions du skill `john` + `stacks/<stack>.md` : emplacement de test conventionnel de la stack, tester le comportement (pas l'implémentation), ≥1 test d'intégration pour la première phase d'interface.
+3. **Preuves fraiches** : lancer la **commande de test de la stack** (voir `stacks/<stack>.md` ; ex. Next.js `npm test -- --reporter=verbose <chemin>`), **coller la sortie**. Pas de "should pass" — output ou rien. Échec → debugging systématique (ci-dessous).
+4. **Qualité** : commandes d'analyse statique / lint de la stack (ex. `npm run typecheck && npm run lint`), **coller la sortie**, 0 erreur obligatoire.
+5. **Commit** (Conventional Commits) : `git add` **fichier par fichier** (jamais `-A`), tests + code dans le même commit, aucun fichier sensible (`.env`, credentials).
+6. **TaskUpdate** → `completed`.
 
 ### Phase 4 — Vérification globale
 
-**Gate obligatoire avant push — aucune exception.**
+**Gate obligatoire avant push — aucune exception. Invoquer `superpowers:verification-before-completion`** (preuve fraiche, jamais "should pass" / "looks correct").
 
 Lancer la **suite complète de vérification de la stack détectée** (`stacks/<stack>.md`) : tests (0 échec), analyse de types/statique (exit 0), lint (0 erreur), formatage, build si applicable.
 
@@ -302,22 +273,15 @@ Puis **re-vérifier depuis le début**. Pas de raccourci.
 
 ## Debugging systématique
 
-**Quand un test/typecheck/lint échoue — NE PAS deviner.**
+Quand un test/typecheck/lint échoue — NE PAS deviner. **Invoquer `superpowers:systematic-debugging`** (investigation → pattern → hypothèse → fix sur la cause racine, preuve fraiche — ne pas la recopier).
 
-**REQUIRED SUB-SKILL:** `superpowers:systematic-debugging`
-
-1. **Investigation** — Lire l'erreur en entier. Identifier ce qui a changé. Tracer le flux.
-2. **Pattern** — Trouver du code similaire qui fonctionne. Comparer.
-3. **Hypothèse** — "X est la cause parce que Y". Plus petit changement possible. Vérifier.
-4. **Fix** — Corriger la root cause, pas le symptôme. Preuve fraiche.
-
-**Escalade : après 3 tentatives échouées → STOP.** 3+ échecs = problème d'architecture. Ne pas tenter un 4e fix.
+**Règle ezacae — escalade : après 3 tentatives échouées → STOP.** 3+ échecs = problème d'architecture, pas un 4e fix.
 
 ## Gestion des erreurs
 
 | Erreur | Action |
 |---|---|
-| Fichier de conception introuvable | Lister `docs/conception/` et demander le bon chemin |
+| Fichier de conception introuvable | Mode autonome : **STOP** + rapport à l'orchestrateur (cf. Phase 0) — ne pas demander, ne pas reconstruire |
 | Workspace git sale | Avertir et demander confirmation |
 | Push rejeté | Vérifier branche remote, rebase si nécessaire |
 | `glab`/`gh` non disponible | Donner la commande manuelle + URL repo |
