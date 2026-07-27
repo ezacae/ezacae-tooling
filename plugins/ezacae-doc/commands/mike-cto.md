@@ -185,18 +185,12 @@ Mettre à jour `.claude/doc-manifest.md` si nécessaire :
 - `⬜ à créer` → `✅ actif` pour un document nouvellement créé
 - `➖ non-applicable` → `⬜ à créer` si le projet a évolué et que ce type est maintenant pertinent
 
-### 5.4b Régénération de mkdocs.yml (mécanique)
-
-Régénérer `mkdocs.yml` via le générateur du plugin — **jamais** à la main. Procédure complète : `${CLAUDE_PLUGIN_ROOT}/references/regen-mkdocs.md`. En bref :
-
-```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/gen-mkdocs.sh" "$DOC_REPO_PATH"
-```
-
 ### 5.5 Commit et push
 
+> Ne pas générer ni committer `mkdocs.yml` : la CI (`ezacae-ci-utils`, job `create-pages`) le (re)génère au push à partir de `docs/`, sans écraser un fichier existant.
+
 ```bash
-git -C $DOC_REPO_PATH add docs/ .claude/doc-manifest.md mkdocs.yml
+git -C $DOC_REPO_PATH add docs/ .claude/doc-manifest.md
 git -C $DOC_REPO_PATH commit -m "docs(cto): [description courte]"
 git -C $DOC_REPO_PATH push -u origin docs/cto/[slug]
 ```
@@ -231,5 +225,5 @@ Déclenché par `/mike-cto feedback` ou description de commentaires de MR.
 3. Si légitime : relancer les `stack-writer` concernés
 
 ```bash
-(cd $DOC_REPO_PATH && git add docs/ .claude/doc-manifest.md mkdocs.yml && git commit --amend --no-edit && git push --force-with-lease)
+(cd $DOC_REPO_PATH && git add docs/ .claude/doc-manifest.md && git commit --amend --no-edit && git push --force-with-lease)
 ```

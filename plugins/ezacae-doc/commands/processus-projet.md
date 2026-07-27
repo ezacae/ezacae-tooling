@@ -59,14 +59,6 @@ Questions si le contexte manque :
 - Sinon → `processus.md` à la racine
 - Mise à jour partielle : modifier uniquement les processus concernés, conserver les autres intact
 
-## Étape 4b — Régénération de mkdocs.yml (mécanique)
-
-Régénérer `mkdocs.yml` via le générateur du plugin — **jamais** à la main. Procédure complète : `${CLAUDE_PLUGIN_ROOT}/references/regen-mkdocs.md`. En bref :
-
-```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/gen-mkdocs.sh" "<racine du projet>"
-```
-
 ## Étape 5 — Présenter
 
 Lien vers le fichier + liste des processus documentés en une ligne.

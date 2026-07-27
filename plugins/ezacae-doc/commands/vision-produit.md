@@ -52,14 +52,6 @@ Produis un fichier `vision.md` avec les sections suivantes :
 - Si `docs/00_vision/` existe → `docs/00_vision/vision.md`
 - Sinon → `vision.md` à la racine du projet
 
-## Étape 3b — Régénération de mkdocs.yml (mécanique)
-
-Régénérer `mkdocs.yml` via le générateur du plugin — **jamais** à la main. Procédure complète : `${CLAUDE_PLUGIN_ROOT}/references/regen-mkdocs.md`. En bref :
-
-```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/gen-mkdocs.sh" "<racine du projet>"
-```
-
 ## Étape 4 — Présenter
 
 Fournis le lien vers le fichier + un résumé en 2 phrases. Ne pas réciter le contenu.

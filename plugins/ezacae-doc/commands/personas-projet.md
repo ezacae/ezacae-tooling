@@ -53,14 +53,6 @@ Questions à poser uniquement si le contexte ne suffit pas :
 - Sinon → `personas.md` à la racine
 - Si le fichier existe et que la mise à jour est partielle : modifier uniquement les types concernés, conserver les autres
 
-## Étape 4b — Régénération de mkdocs.yml (mécanique)
-
-Régénérer `mkdocs.yml` via le générateur du plugin — **jamais** à la main. Procédure complète : `${CLAUDE_PLUGIN_ROOT}/references/regen-mkdocs.md`. En bref :
-
-```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/gen-mkdocs.sh" "<racine du projet>"
-```
-
 ## Étape 5 — Présenter
 
 Lien vers le fichier + nombre de types documentés en une phrase.
