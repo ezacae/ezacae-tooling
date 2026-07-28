@@ -172,7 +172,7 @@ Avant d'agir, lire le statut courant (`<HELPERS>/jira-get.sh <KEY>`) et vérifie
 |-------|-----------------|-------|
 | **Mike** | `NOUVEAU`, `CADRAGE` ou `RECETTE INTERNE` | s'arrêter : `⛔ Mike n'intervient que sur NOUVEAU, CADRAGE ou RECETTE INTERNE (statut actuel : <X>).` |
 | **Sarah** | `CONCEPTION` | s'arrêter : `⛔ Sarah ne démarre que sur CONCEPTION (statut actuel : <X>).` |
-| **Sarah → morgan/john** | `CONCEPTION OK` | ne pas lancer l'implémentation tant que le ticket n'est pas `CONCEPTION OK`. |
+| **Sarah → developer** | `CONCEPTION OK` | ne pas lancer l'implémentation tant que le ticket n'est pas `CONCEPTION OK`. |
 
 ## 7. Helpers REST (récapitulatif)
 

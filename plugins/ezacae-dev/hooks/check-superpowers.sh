@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # check-superpowers.sh — garde SessionStart (RD-8, ezacae-dev).
 #
-# Les skills ezacae-dev (chuck, morgan, john) délèguent leur méthodologie au
+# Les skills ezacae-dev (chuck, developer) délèguent leur méthodologie au
 # plugin `superpowers` (couche 1 du harnais). Ce garde vérifie :
 #   1. que superpowers est installé — sinon la délégation dégrade en silence ;
 #   2. que sa version correspond à `superpowers.lock` — sinon dérive possible.
@@ -28,7 +28,7 @@ version="$(find "$CACHE" -mindepth 3 -maxdepth 3 -type d -path '*/superpowers/*'
   | sed 's#.*/##' | sort -V | tail -1)"
 
 if [ -z "$version" ]; then
-  echo "⚠️  ezacae-dev : plugin « superpowers » non détecté. Les skills chuck / morgan / john délèguent leur méthodologie à superpowers — sans lui, elle est absente."
+  echo "⚠️  ezacae-dev : plugin « superpowers » non détecté. Les skills chuck / developer délèguent leur méthodologie à superpowers — sans lui, elle est absente."
   echo "    Installe-le : claude plugin install superpowers@claude-plugins-official"
   exit 0
 fi

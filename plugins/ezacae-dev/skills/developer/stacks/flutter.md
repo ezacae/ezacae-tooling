@@ -1,6 +1,6 @@
 # Conventions de stack — Flutter (Dart)
 
-> **Bibliothèque de conventions du skill `john` — entrée `flutter`.** Chargé automatiquement quand la détection de stack identifie un projet Flutter (`pubspec.yaml` contenant `flutter:`). Contient les conventions **génériques** Flutter / Dart valables pour toute application ezacae sur cette stack.
+> **Bibliothèque de conventions du skill `developer` — entrée `flutter`.** Chargé automatiquement quand la détection de stack identifie un projet Flutter (`pubspec.yaml` contenant `flutter:`). Contient les conventions **génériques** Flutter / Dart valables pour toute application ezacae sur cette stack.
 >
 > **Spécificités d'une application donnée** (palette/thème maison, catalogue de widgets et de providers métier, schéma de données propre au projet, intégrations) **ne sont pas ici** : elles vivent dans le `CLAUDE.md` à la racine du repo applicatif, chargé en complément. En cas de conflit, **le `CLAUDE.md` du projet prime**.
 >

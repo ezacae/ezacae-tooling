@@ -1,6 +1,6 @@
 # Conventions de stack — Next.js (App Router)
 
-> **Bibliothèque de conventions du skill `john` — entrée `nextjs`.** Chargé automatiquement quand la détection de stack identifie un projet Next.js. Contient les conventions **génériques** Next.js / React / TypeScript valables pour toute application ezacae sur cette stack.
+> **Bibliothèque de conventions du skill `developer` — entrée `nextjs`.** Chargé automatiquement quand la détection de stack identifie un projet Next.js. Contient les conventions **génériques** Next.js / React / TypeScript valables pour toute application ezacae sur cette stack.
 >
 > **Spécificités d'une application donnée** (catalogue de hooks/composants maison, modèle Firestore/SQL propre au projet, palette de couleurs, intégrations) **ne sont pas ici** : elles vivent dans le `CLAUDE.md` à la racine du repo applicatif, chargé en complément. En cas de conflit, **le `CLAUDE.md` du projet prime**.
 >
