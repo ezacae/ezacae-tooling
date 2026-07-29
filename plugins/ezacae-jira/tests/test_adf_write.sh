@@ -70,6 +70,24 @@ check_literal "puce indentée (pas d'imbrication)" \
 check_literal "puce sans espace après le tiret" \
   '-pas une puce'
 
+# --- Constructions promues -----------------------------------------------------
+# expect_shape <label> <texte> <programme jq booléen>
+expect_shape() {
+  local label="$1" txt="$2" prog="$3"
+  if printf '%s' "$txt" | jira_text_to_adf | jq -e "$prog" >/dev/null 2>&1; then
+    ok "$label"
+  else
+    nope "$label"
+    printf '%s' "$txt" | jira_text_to_adf | head -20 | sed 's/^/      /'
+  fi
+}
+
+expect_shape "## produit un heading de niveau 2" '## Périmètre' \
+  '(.content|length)==1 and .content[0].type=="heading" and .content[0].attrs.level==2
+   and .content[0].content[0].text=="Périmètre"'
+expect_shape "### produit un heading de niveau 3" '### Détail' \
+  '.content[0].type=="heading" and .content[0].attrs.level==3'
+
 echo "----"
 echo "Résultat : PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -161,12 +161,36 @@ JIRA_JQ_ADF_RENDER='
   def adf_render: (.content // []) | map(adf_block) | map(select(. != "")) | join("\n\n");
 '
 
-# Convertit du texte multi-lignes (stdin) en document ADF (une ligne = un
-# paragraphe ; ligne vide = paragraphe vide). Émet l'objet `doc` sur stdout.
-jira_text_to_adf() {
-  jq -Rs '{type:"doc",version:1,content:(
+# Programme jq d'origine (RD-15) : une ligne = un paragraphe. Conservé mot pour
+# mot comme repli — c'est lui qui garantit qu'un envoi aboutit toujours (RD-23).
+JIRA_JQ_TEXT_TO_ADF_FLAT='{type:"doc",version:1,content:(
     rtrimstr("\n") | split("\n") |
     map(if . == "" then {type:"paragraph"}
         else {type:"paragraph",content:[{type:"text",text:.}]} end)
   )}'
+
+# Convertisseur ORIENTÉ LIGNE (RD-23). Ne promeut que les constructions ancrées
+# en début de ligne : titres, listes, blocs de code. Aucune recherche de paires
+# de signes au milieu des phrases — nos textes sont pleins de noms de fichiers et
+# de chemins que cela corromprait en silence. Toute ligne non reconnue redevient
+# un paragraphe, à l'identique de JIRA_JQ_TEXT_TO_ADF_FLAT.
+JIRA_JQ_TEXT_TO_ADF='
+  def para($s): if $s == "" then {type:"paragraph"}
+                else {type:"paragraph",content:[{type:"text",text:$s}]} end;
+  def heading($lvl; $s): {type:"heading",attrs:{level:$lvl},content:[{type:"text",text:$s}]};
+
+  rtrimstr("\n") | split("\n")
+  | reduce .[] as $line ({out:[]};
+      ($line | capture("^(?<h>#{2,3}) (?<t>\\S.*)$") // null) as $head
+      | if $head != null then
+          .out += [heading(($head.h|length); $head.t)]
+        else
+          .out += [para($line)]
+        end)
+  | {type:"doc",version:1,content:.out}
+'
+
+# Convertit du texte multi-lignes (stdin) en document ADF sur stdout.
+jira_text_to_adf() {
+  jq -Rs "$JIRA_JQ_TEXT_TO_ADF"
 }
