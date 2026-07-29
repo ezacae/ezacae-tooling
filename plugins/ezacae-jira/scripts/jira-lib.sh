@@ -179,8 +179,14 @@ JIRA_JQ_TEXT_TO_ADF='
                 else {type:"paragraph",content:[{type:"text",text:$s}]} end;
   def heading($lvl; $s): {type:"heading",attrs:{level:$lvl},content:[{type:"text",text:$s}]};
   def item($s): {type:"listItem",content:[para($s)]};
+  def code($lang; $lines):
+    {type:"codeBlock"}
+    + (if $lang == "" then {} else {attrs:{language:$lang}} end)
+    + (if ($lines|length) == 0 then {} else {content:[{type:"text",text:($lines|join("\n"))}]} end);
 
-  # Referme la liste en cours (si elle existe) et la verse dans .out.
+  # Referme le bloc en cours (liste, ou bloc de code jamais fermé) et le verse
+  # dans .out. Un bloc de code non fermé DÉGRADE : sa ligne d ouverture et ses
+  # lignes accumulées ressortent en paragraphes, dans l ordre d origine.
   def flush:
     if .mode == "bullet" then
       .out += [{type:"bulletList",content:.buf}] | .mode = "none" | .buf = []
@@ -189,14 +195,29 @@ JIRA_JQ_TEXT_TO_ADF='
                 + (if .order == 1 then {} else {attrs:{order:.order}} end)
                 + {content:.buf} ]
       | .mode = "none" | .buf = []
+    elif .mode == "fence" then
+      .out += ([para(.raw)] + (.buf | map(para(.))))
+      | .mode = "none" | .buf = [] | .lang = "" | .raw = ""
     else . end;
 
   rtrimstr("\n") | split("\n")
-  | reduce .[] as $line ({out:[], mode:"none", buf:[], order:1};
-      ($line | capture("^(?<h>#{2,3}) (?<t>\\S.*)$") // null) as $head
+  | reduce .[] as $line ({out:[], mode:"none", buf:[], order:1, lang:"", raw:""};
+      ($line | capture("^```(?<lang>.*)$") // null) as $fence
+      | ($line | capture("^(?<h>#{2,3}) (?<t>\\S.*)$") // null) as $head
       | ($line | capture("^- (?<t>\\S.*)$") // null) as $bul
       | ($line | capture("^(?<n>[0-9]+)\\. (?<t>\\S.*)$") // null) as $ord
-      | if $head != null then flush | .out += [heading(($head.h|length); $head.t)]
+      # Priorité maximale au bloc de code : à l intérieur, AUCUNE promotion.
+      # C est ce qui protège les extraits shell (« # commentaire » ne devient
+      # pas un titre, « -f fichier » ne devient pas une puce).
+      | if .mode == "fence" then
+          (if ($line | test("^```\\s*$")) then
+             .out += [code(.lang; .buf)]
+             | .mode = "none" | .buf = [] | .lang = "" | .raw = ""
+           else .buf += [$line] end)
+        elif $fence != null then
+          flush | .mode = "fence" | .buf = []
+          | .lang = ($fence.lang | ltrimstr(" ") | rtrimstr(" ")) | .raw = $line
+        elif $head != null then flush | .out += [heading(($head.h|length); $head.t)]
         elif $bul != null then
           (if .mode == "bullet" then . else flush | .mode = "bullet" end)
           | .buf += [item($bul.t)]
@@ -209,7 +230,40 @@ JIRA_JQ_TEXT_TO_ADF='
   | {type:"doc",version:1,content:.out}
 '
 
+# Invariants de validité ADF vérifiables hors-ligne (sous-ensemble couvrant nos
+# erreurs possibles, pas le schéma officiel de Jira). Booléen sur stdout.
+JIRA_JQ_ADF_VALID='
+  ([.. | objects | select(.type=="text") | select((.text // "") == "")] | length) == 0
+  and ([.. | objects | select(.type=="listItem") | (.content // [])[]
+        | select((.type // "") as $t
+                 | ($t=="paragraph" or $t=="bulletList" or $t=="orderedList") | not)]
+       | length) == 0
+  and ([.. | objects | select(.type=="bulletList" or .type=="orderedList")
+        | (.content // [])[] | select(.type != "listItem")] | length) == 0
+  and ([.. | objects | select(.type=="heading")
+        | select(((.attrs.level // 0) | (. >= 1 and . <= 6)) | not)] | length) == 0
+  and ([.. | objects | select(.type=="codeBlock") | (.content // [])[]
+        | select(.type != "text" or has("marks"))] | length) == 0
+'
+
 # Convertit du texte multi-lignes (stdin) en document ADF sur stdout.
+#
+# Filet de sécurité (RD-23) : si la structure produite viole les invariants de
+# validité, on replie sur la conversion plate d'origine plutôt que de risquer un
+# refus de l'API. Un envoi ne doit JAMAIS échouer à cause de la mise en forme —
+# dans jira-transition.sh le commentaire part APRÈS la transition, donc un refus
+# laisserait le ticket transitionné sans passation, sans pouvoir rejouer (la
+# garde de statut interdit CONCEPTION → CONCEPTION).
 jira_text_to_adf() {
-  jq -Rs "$JIRA_JQ_TEXT_TO_ADF"
+  local input adf
+  input=$(cat)
+  adf=$(printf '%s' "$input" | jq -Rs "$JIRA_JQ_TEXT_TO_ADF")
+  if printf '%s' "$adf" | jq -e "$JIRA_JQ_ADF_VALID" >/dev/null 2>&1; then
+    # $(...) supprime les retours à la ligne finaux : jq en émet exactement un,
+    # et la non-régression octet pour octet en dépend.
+    printf '%s\n' "$adf"
+  else
+    echo "⚠️  Structure ADF invalide — repli sur la conversion plate." >&2
+    printf '%s' "$input" | jq -Rs "$JIRA_JQ_TEXT_TO_ADF_FLAT"
+  fi
 }

@@ -119,6 +119,76 @@ expect_shape "liste numérotée démarrant à 3 : attrs.order=3" \
   '3. trois' \
   '.content[0].type=="orderedList" and .content[0].attrs.order==3'
 
+expect_shape "bloc de code avec langage" \
+  '```bash
+set -e
+exit 0
+```' \
+  '(.content|length)==1 and .content[0].type=="codeBlock"
+   and .content[0].attrs.language=="bash"
+   and .content[0].content[0].text=="set -e\nexit 0"'
+
+expect_shape "rien n'est promu à l'intérieur d'un bloc de code" \
+  '```
+## pas un titre
+- pas une puce
+```' \
+  '(.content|length)==1 and .content[0].type=="codeBlock"
+   and (.content[0]|has("attrs")|not)
+   and .content[0].content[0].text=="## pas un titre\n- pas une puce"'
+
+expect_shape "bloc de code vide : pas de nœud texte vide" \
+  '```
+```' \
+  '.content[0].type=="codeBlock" and (.content[0]|has("content")|not)'
+
+expect_shape "bloc jamais fermé : dégradation en paragraphes, ordre conservé" \
+  '```bash
+set -e' \
+  '[.content[].type] == ["paragraph","paragraph"]
+   and .content[0].content[0].text=="```bash"
+   and .content[1].content[0].text=="set -e"'
+
+# --- Validité structurelle -----------------------------------------------------
+# Sous-ensemble des règles d'imbrication de Jira : première cause de refus d'envoi.
+expect_valid() {
+  local label="$1" txt="$2"
+  if printf '%s' "$txt" | jira_text_to_adf | jq -e "$JIRA_JQ_ADF_VALID" >/dev/null 2>&1; then
+    ok "validité — $label"
+  else
+    nope "validité — $label"
+  fi
+}
+
+expect_valid "document mixte" '## Titre
+
+- un
+- deux
+
+1. étape
+
+```sh
+echo ok
+```
+Fin.'
+expect_valid "corpus json-hostile" "$(cat "$HERE/fixtures/plain/json-hostile.txt")"
+
+# --- Filet de sécurité ---------------------------------------------------------
+# Si le convertisseur produisait une structure invalide, l'envoi doit tout de
+# même aboutir : repli sur la conversion plate, avertissement sur stderr.
+# On force le cas en substituant un programme volontairement invalide (nœud
+# texte vide), ce qu'aucune entrée ne peut provoquer par elle-même.
+ERRFILE=$(mktemp)
+BROKEN='{type:"doc",version:1,content:[{type:"paragraph",content:[{type:"text",text:""}]}]}'
+fb_out=$(printf 'Passation critique.' | JIRA_JQ_TEXT_TO_ADF="$BROKEN" jira_text_to_adf 2>"$ERRFILE")
+fb_err=$(cat "$ERRFILE"); rm -f "$ERRFILE"
+fb_txt=$(printf '%s' "$fb_out" | jq -r '[.. | objects | select(.type=="text") | .text] | join("")')
+if [ "$fb_txt" = "Passation critique." ] && [[ "$fb_err" == *"repli sur la conversion plate"* ]]; then
+  ok "filet de sécurité — repli plat, texte préservé, avertissement émis"
+else
+  nope "filet de sécurité — texte=«$fb_txt» stderr=«$fb_err»"
+fi
+
 echo "----"
 echo "Résultat : PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
