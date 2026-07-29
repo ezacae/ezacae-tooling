@@ -24,10 +24,30 @@ Chaque projet dispose de son propre dossier `docs/` versionné dans son repo Git
 docs/
 ├── 00_vision/
 │   └── vision.md
-└── 01_product/
-    ├── personas.md
-    └── processus.md
+├── 01_product/
+│   ├── personas.md
+│   ├── processus.md
+│   └── fonctions.md
+├── 02_architecture/
+│   ├── architecture.md
+│   ├── auth.md
+│   ├── ecrans-ui.md
+│   ├── interactions-ui.md
+│   └── fonctions-techniques.md
+├── 03_donnees/
+│   ├── bdd.md
+│   └── api-endpoints.md
+└── 04_exploitation/
+    ├── variables-env.md
+    ├── deploiement.md
+    └── tests.md
 ```
+
+Les documents de `00_vision` et `01_product` relèvent du produit (`/mike-po`), ceux
+de `02_architecture`, `03_donnees` et `04_exploitation` du technique (`/mike-cto`).
+Tout document listé ici est produit par une commande ou un template du plugin
+`ezacae-doc` : la liste et l'outillage sont tenus alignés par
+`plugins/ezacae-doc/tests/test-conventions-structure.sh`.
 
 ## Conventions éditoriales
 
