@@ -971,10 +971,15 @@ fi
 
 # Séparation SIMPLE : les paragraphes vides du texte source ne doivent pas
 # doubler les lignes blanches (défaut constaté en bac à sable, cf. adf_render).
-if printf '%s' "$ROUND" | grep -qz $'\n\n\n'; then
-  echo "FAIL  aller-retour — lignes blanches doublées"; FAIL=$((FAIL+1))
-else
+# Compté en awk, pas en grep : grep découpe son motif sur les retours à la
+# ligne, donc un motif « \n\n\n » devient des motifs vides qui matchent tout
+# (piège rencontré à l'implémentation — le test échouait sur du code correct).
+MAXBLANK=$(printf '%s\n' "$ROUND" \
+  | awk 'BEGIN{m=0;c=0} /^$/{c++; if(c>m)m=c; next} {c=0} END{print m}')
+if [ "$MAXBLANK" -le 1 ]; then
   echo "PASS  aller-retour — une seule ligne blanche entre blocs"; PASS=$((PASS+1))
+else
+  echo "FAIL  aller-retour — $MAXBLANK lignes blanches consécutives"; FAIL=$((FAIL+1))
 fi
 ```
 

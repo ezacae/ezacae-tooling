@@ -83,6 +83,43 @@ DOC_UNKNOWN='{"type":"doc","version":1,"content":[
     {"type":"paragraph","content":[{"type":"text","text":"contenu inconnu"}]}]}]}'
 expect_contains "type inconnu : rien n'est jeté" "$DOC_UNKNOWN" "contenu inconnu"
 
+# --- Aller-retour : écriture puis lecture d'un texte couvrant les 4 constructions ---
+ROUND=$(jira_text_to_adf < "$HERE/fixtures/reference.md" | jq -r "$JIRA_JQ_ADF_RENDER adf_render")
+
+roundtrip() {
+  local label="$1" want="$2"
+  if [[ "$ROUND" == *"$want"$'\n'* || "$ROUND" == *"$want" ]]; then
+    echo "PASS  aller-retour — $label"; PASS=$((PASS+1))
+  else
+    echo "FAIL  aller-retour — $label (absent : «$want»)"; FAIL=$((FAIL+1))
+  fi
+}
+roundtrip "titre de niveau 2"  '## Périmètre retenu'
+roundtrip "titre de niveau 3"  '### Hors périmètre'
+roundtrip "puce"               '- listes numérotées'
+roundtrip "numéro"             '2. corriger la lecture'
+roundtrip "ouverture de bloc"  '```bash'
+roundtrip "glob intact"        'Gras, italique et liens. Un chemin comme plugins/**/* doit rester intact.'
+
+# Aucun bloc collé : jamais deux blocs sans séparation.
+if printf '%s' "$ROUND" | grep -q 'retenuÉcriture'; then
+  echo "FAIL  aller-retour — blocs collés"; FAIL=$((FAIL+1))
+else
+  echo "PASS  aller-retour — blocs séparés"; PASS=$((PASS+1))
+fi
+
+# Séparation SIMPLE : les paragraphes vides du texte source ne doivent pas
+# doubler les lignes blanches (défaut trouvé en bac à sable, cf. adf_render).
+# Compté en awk, pas en grep : grep découpe son motif sur les retours à la
+# ligne, donc un motif « \n\n\n » devient des motifs vides qui matchent tout.
+MAXBLANK=$(printf '%s\n' "$ROUND" \
+  | awk 'BEGIN{m=0;c=0} /^$/{c++; if(c>m)m=c; next} {c=0} END{print m}')
+if [ "$MAXBLANK" -le 1 ]; then
+  echo "PASS  aller-retour — une seule ligne blanche entre blocs"; PASS=$((PASS+1))
+else
+  echo "FAIL  aller-retour — $MAXBLANK lignes blanches consécutives"; FAIL=$((FAIL+1))
+fi
+
 echo "----"
 echo "Résultat : PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
