@@ -88,6 +88,37 @@ expect_shape "## produit un heading de niveau 2" '## Périmètre' \
 expect_shape "### produit un heading de niveau 3" '### Détail' \
   '.content[0].type=="heading" and .content[0].attrs.level==3'
 
+expect_shape "deux puces consécutives = une seule bulletList" \
+  '- un
+- deux' \
+  '(.content|length)==1 and .content[0].type=="bulletList"
+   and (.content[0].content|length)==2
+   and .content[0].content[0].type=="listItem"
+   and .content[0].content[0].content[0].type=="paragraph"
+   and .content[0].content[0].content[0].content[0].text=="un"'
+
+expect_shape "un paragraphe ferme la liste" \
+  '- un
+suite' \
+  '[.content[].type] == ["bulletList","paragraph"]'
+
+expect_shape "une ligne vide ferme la liste et reste un paragraphe vide" \
+  '- un
+
+- deux' \
+  '[.content[].type] == ["bulletList","paragraph","bulletList"]
+   and (.content[1] | has("content") | not)'
+
+expect_shape "liste numérotée démarrant à 1 : pas d'attrs" \
+  '1. un
+2. deux' \
+  '.content[0].type=="orderedList" and (.content[0]|has("attrs")|not)
+   and (.content[0].content|length)==2'
+
+expect_shape "liste numérotée démarrant à 3 : attrs.order=3" \
+  '3. trois' \
+  '.content[0].type=="orderedList" and .content[0].attrs.order==3'
+
 echo "----"
 echo "Résultat : PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -178,15 +178,34 @@ JIRA_JQ_TEXT_TO_ADF='
   def para($s): if $s == "" then {type:"paragraph"}
                 else {type:"paragraph",content:[{type:"text",text:$s}]} end;
   def heading($lvl; $s): {type:"heading",attrs:{level:$lvl},content:[{type:"text",text:$s}]};
+  def item($s): {type:"listItem",content:[para($s)]};
+
+  # Referme la liste en cours (si elle existe) et la verse dans .out.
+  def flush:
+    if .mode == "bullet" then
+      .out += [{type:"bulletList",content:.buf}] | .mode = "none" | .buf = []
+    elif .mode == "ordered" then
+      .out += [ {type:"orderedList"}
+                + (if .order == 1 then {} else {attrs:{order:.order}} end)
+                + {content:.buf} ]
+      | .mode = "none" | .buf = []
+    else . end;
 
   rtrimstr("\n") | split("\n")
-  | reduce .[] as $line ({out:[]};
+  | reduce .[] as $line ({out:[], mode:"none", buf:[], order:1};
       ($line | capture("^(?<h>#{2,3}) (?<t>\\S.*)$") // null) as $head
-      | if $head != null then
-          .out += [heading(($head.h|length); $head.t)]
-        else
-          .out += [para($line)]
+      | ($line | capture("^- (?<t>\\S.*)$") // null) as $bul
+      | ($line | capture("^(?<n>[0-9]+)\\. (?<t>\\S.*)$") // null) as $ord
+      | if $head != null then flush | .out += [heading(($head.h|length); $head.t)]
+        elif $bul != null then
+          (if .mode == "bullet" then . else flush | .mode = "bullet" end)
+          | .buf += [item($bul.t)]
+        elif $ord != null then
+          (if .mode == "ordered" then . else flush | .mode = "ordered" | .order = ($ord.n|tonumber) end)
+          | .buf += [item($ord.t)]
+        else flush | .out += [para($line)]
         end)
+  | flush
   | {type:"doc",version:1,content:.out}
 '
 
