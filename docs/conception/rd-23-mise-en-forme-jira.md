@@ -1079,7 +1079,11 @@ Run :
 python3 -c "import yaml,sys; yaml.safe_load(open('.gitlab-ci.yml')); print('YAML valide')"
 status=0; for t in plugins/*/tests/test_*.sh; do echo "=== $t"; bash "$t" || status=1; done; echo "status=$status"
 ```
-Attendu : `YAML valide`, puis chaque suite avec `FAIL=0` et `status=0`. Les tests `test-*.sh` (tiret) des plugins `ezacae-dev` et `ezacae-doc` ne sont pas captés par le motif `test_*.sh` — c'est volontaire, ce ticket n'a pas vocation à les faire entrer dans la CI.
+Attendu : `YAML valide`, puis chaque suite avec `FAIL=0` et `status=0`.
+
+> **Écart assumé à l'implémentation.** Le plan prévoyait le motif `test_*.sh`, laissant de côté les cinq `test-*.sh` (tiret) des plugins `ezacae-dev` et `ezacae-doc`. Vérification faite, ces cinq passent : le motif retenu est donc `test[-_]*.sh`, qui couvre les **huit** fichiers de tests du dépôt. Élargir était gratuit, et l'objet de la tâche est bien que plus rien ne dorme.
+>
+> `python3 -c "import yaml"` n'est pas disponible sur le poste (module absent) ; la validation passe par un script Ruby équivalent.
 
 - [ ] **Étape 3 : commit**
 
