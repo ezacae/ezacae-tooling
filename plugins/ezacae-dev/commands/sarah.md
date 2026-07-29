@@ -141,10 +141,10 @@ But : relire le diff produit avant intégration.
 
 **En mode pipeline JIRA :**
 - Poster le rapport de revue en **commentaire** du ticket : `<HELPERS>/jira-comment.sh <KEY> -f <rapport.md>`.
-- **Findings bloquants** → `<HELPERS>/jira-transition.sh <KEY> "EN COURS"`, corriger via `developer`, puis re-reviewer.
+- **Findings bloquants** → `<HELPERS>/jira-transition.sh <KEY> "EN COURS"`, corriger via une conception (`chuck`) puis `developer`, puis re-reviewer.
 - **Revue OK** (aucun bloquant restant) → `<HELPERS>/jira-transition.sh <KEY> "RECETTE INTERNE"`, puis **invoquer `/mike <KEY>`** pour la mise à jour de la documentation finale (Mike clôt le pipeline).
 
-→ **GATE** : présenter la synthèse. Demander quels findings appliquer. Les corrections passent par `developer` (conception d'abord si le correctif est non trivial).
+→ **GATE** : présenter la synthèse. Demander quels findings appliquer. Les corrections passent par une conception (`chuck`) puis `developer`.
 
 ---
 
