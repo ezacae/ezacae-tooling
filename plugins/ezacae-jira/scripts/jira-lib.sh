@@ -106,6 +106,61 @@ jira_pipeline_guard() {
 
 # --- ADF (Atlassian Document Format) ------------------------------------------
 
+# Programme jq définissant `adf_render` : un document ADF → texte lisible (RD-23).
+#
+# Deux exigences distinctes :
+#  1. rendre les frontières de blocs visibles (une ligne vide entre les blocs, un
+#     tiret par puce, des délimiteurs autour des blocs de code) — l'ancien filtre
+#     concaténait tout, d'où le « RD-17PÉRIMÈTRE RÉEL » illisible ;
+#  2. ne JAMAIS jeter de contenu : tout type de nœud inconnu retombe sur une
+#     extraction récursive. C'est aussi un correctif — les cartes de ticket liées
+#     (inlineCard) disparaissaient, d'où le « The linked issue -  has been resolved ».
+#
+# Stocké en VARIABLE : ce fichier ne doit rien exécuter ni rien écrire au
+# chargement, car le hook jira-guard.sh parse son propre stdout en JSON.
+# Se termine par un ';' → le corps du programme se concatène SANS barre verticale :
+#   jq -r "$JIRA_JQ_ADF_RENDER adf_render"
+JIRA_JQ_ADF_RENDER='
+  def adf_inline:
+    if type == "array" then map(adf_inline) | join("")
+    elif type != "object" then ""
+    elif .type == "text" then (.text // "")
+    elif .type == "hardBreak" then "\n"
+    elif (.attrs.text? // null) != null then .attrs.text
+    elif (.attrs.url? // null) != null then .attrs.url
+    elif (.attrs.shortName? // null) != null then .attrs.shortName
+    elif .content? then (.content | adf_inline)
+    else "" end;
+
+  def indent($n): split("\n") | map((" " * $n) + .) | join("\n");
+
+  def adf_block:
+    if type != "object" then ""
+    elif .type == "paragraph" then (.content // [] | adf_inline)
+    elif .type == "heading" then (("#" * (.attrs.level // 1)) + " " + (.content // [] | adf_inline))
+    elif .type == "codeBlock" then
+      ("```" + (.attrs.language // "") + "\n" + (.content // [] | adf_inline) + "\n```")
+    elif .type == "rule" then "---"
+    elif .type == "blockquote" then
+      ((.content // [] | map(adf_block) | join("\n")) | split("\n") | map("> " + .) | join("\n"))
+    elif .type == "bulletList" then
+      (.content // [] | map("- " + ((.content // [] | map(adf_block) | join("\n")) | indent(2) | ltrimstr("  "))) | join("\n"))
+    elif .type == "orderedList" then
+      ((.attrs.order // 1) as $start
+       | .content // [] | to_entries
+       | map((($start + .key) | tostring) + ". "
+             + ((.value.content // [] | map(adf_block) | join("\n")) | indent(3) | ltrimstr("   ")))
+       | join("\n"))
+    elif .type == "table" then
+      (.content // [] | map("| " + ((.content // []) | map(adf_inline) | join(" | ")) + " |") | join("\n"))
+    elif .content? then (.content | map(adf_block) | join("\n"))
+    else adf_inline end;
+
+  # Les blocs vides sont écartés AVANT le join : les lignes vides du texte source
+  # produisent des paragraphes vides qui doubleraient les séparations.
+  def adf_render: (.content // []) | map(adf_block) | map(select(. != "")) | join("\n\n");
+'
+
 # Convertit du texte multi-lignes (stdin) en document ADF (une ligne = un
 # paragraphe ; ligne vide = paragraphe vide). Émet l'objet `doc` sur stdout.
 jira_text_to_adf() {
