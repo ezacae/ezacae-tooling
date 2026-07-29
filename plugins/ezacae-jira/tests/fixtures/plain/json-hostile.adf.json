@@ -1,0 +1,33 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "🤖 [Mike] Cadrage terminé — 100% des cas"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Structure : {\"type\":\"doc\",\"version\":1} et \"guillemets\""
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Antislash \\ et double \\\\ et tabulation\tlittérale"
+        }
+      ]
+    }
+  ]
+}
