@@ -4,7 +4,7 @@
 
 **Outillage ezacae en 5 lignes.**
 
-Le marketplace qui packe les commandes, skills et agents ezacae — **Mike**, **Sarah**, **chuck**, **morgan**, le pipeline JIRA — en quatre plugins versionnés. Fini le copier-coller dans chaque `~/.claude`.
+Le marketplace qui packe les commandes, skills et agents ezacae — **Mike**, **Sarah**, **chuck**, **developer**, le pipeline JIRA — en quatre plugins versionnés. Fini le copier-coller dans chaque `~/.claude`.
 
 ```text
 /plugin marketplace add git@gitlab.com:ezacae/ezacae-claude-tooling.git
@@ -27,7 +27,7 @@ Le marketplace qui packe les commandes, skills et agents ezacae — **Mike**, **
 | **ezacae-base** | hook SessionStart · `conventions.md` | Conventions globales ezacae (contexte, stack documentaire, règles éditoriales) injectées en contexte à chaque session. Source unique d'équipe. |
 | **ezacae-jira** | skill · helpers REST · 2 hooks | Infra du pipeline JIRA Mike ⇄ Sarah : skill `jira-pipeline`, helpers REST, hooks de pré-checks et garde de statut. |
 | **ezacae-doc** | 6 commandes · 2 agents · → jira | Orchestrateur **Mike** (PO/CTO) et commandes vision · personas · processus, avec les agents `doc-writer` & `stack-writer`. |
-| **ezacae-dev** | 2 commandes · 5 skills · 4 agents · → jira | Orchestrateur **Sarah** + skills chuck · john · morgan · grill-me · handoff, et agents auto-suffisants morgan/john. |
+| **ezacae-dev** | 2 commandes · 4 skills · 3 agents · → jira | Orchestrateur **Sarah** + skills chuck · developer · grill-me · handoff, et agent developer (unique exécuteur, sous HARD-GATE). |
 
 ## 03 · Dépendances — comment ça s'emboîte
 

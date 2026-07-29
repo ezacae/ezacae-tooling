@@ -8,7 +8,7 @@ description: Use when designing, specifying, or planning an application feature,
 
 Produit une specification detaillee et actionnable **avant** toute ecriture de code. Couvre : exploration, approches, modele de donnees, architecture, UX, risques, plan d'implementation TDD.
 
-> **Conventions de stack (plugin ezacae-dev).** Les références à `skills/john/stacks/<stack>.md` plus bas désignent des fichiers **embarqués dans le plugin ezacae-dev**, pas des fichiers du projet. Leur chemin absolu est injecté au démarrage par le hook SessionStart d'ezacae-dev (ligne « Conventions de stack embarquées : <racine>/skills/john/stacks/<stack>.md ») — les lire via ce chemin absolu.
+> **Conventions de stack (plugin ezacae-dev).** Les références à `skills/developer/stacks/<stack>.md` plus bas désignent des fichiers **embarqués dans le plugin ezacae-dev**, pas des fichiers du projet. Leur chemin absolu est injecté au démarrage par le hook SessionStart d'ezacae-dev (ligne « Conventions de stack embarquées : <racine>/skills/developer/stacks/<stack>.md ») — les lire via ce chemin absolu.
 
 <HARD-GATE>
 AUCUN code, AUCUN scaffolding, AUCUNE implementation tant que la conception n'est pas ecrite, auto-reviewee et validee par l'utilisateur. Pas d'exception — meme pour les "petites modifs".
@@ -16,9 +16,8 @@ AUCUN code, AUCUN scaffolding, AUCUNE implementation tant que la conception n'es
 
 ## Quand NE PAS utiliser
 
-- Implémentation pure (code à écrire) → utiliser le skill `john`
-- Exécution d'une conception existante → utiliser `/morgan <chemin>`
-- Bug trivial (typo, CSS, config) ne nécessitant pas de conception
+- Exécution d'une conception existante → utiliser `/developer <chemin>`
+- Bug trivial (typo, CSS, config) ne nécessitant ni conception ni exécuteur — corriger directement
 
 ## Méthode : Superpowers, invoquée — jamais recopiée
 
@@ -30,9 +29,9 @@ Chuck **n'écrit pas** la méthodologie générale (exploration, questionnement,
 
 ## Sources de vérité
 
-Chuck n'est lié à aucune stack. **Détecter d'abord la stack** (procédure de référence dans le skill `john`, section « Détection de la stack »), puis charger :
+Chuck n'est lié à aucune stack. **Détecter d'abord la stack** (procédure de référence dans le skill `developer`, section « Détection de la stack »), puis charger :
 
-1. Les conventions génériques de la stack détectée : `skills/john/stacks/<stack>.md`.
+1. Les conventions génériques de la stack détectée : `skills/developer/stacks/<stack>.md`.
 2. `CLAUDE.md` (racine projet) — conventions spécifiques au projet : modèle de données, catalogue de composants/hooks maison, intégrations, palette.
 
 En cas de conflit, **`CLAUDE.md` du projet prime**. La conception doit refléter la stack détectée, jamais en présumer une.
@@ -54,7 +53,7 @@ digraph chuck_flow {
     plan [label="7. Plan d'implémentation\n(writing-plans)"];
     review [label="8. Auto-review"];
     validate [label="9. Validation utilisateur" shape=diamond];
-    done [label="Conception validée\n→ /morgan ou /john" shape=doublecircle];
+    done [label="Conception validée\n→ /developer" shape=doublecircle];
 
     explore -> approaches;
     approaches -> user_choice;
@@ -75,7 +74,7 @@ digraph chuck_flow {
 
 **Colle ezacae — détecter la stack et explorer le code (silencieux) :**
 
-- **Détecter la stack** (procédure du skill `john`) et charger `skills/john/stacks/<stack>.md` + le `CLAUDE.md` du projet.
+- **Détecter la stack** (procédure du skill `developer`) et charger `skills/developer/stacks/<stack>.md` + le `CLAUDE.md` du projet.
 - Lire les fichiers, modules, composants, types liés à la demande ; vérifier les commits récents sur la zone ; repérer les patterns existants réutilisables.
 
 **Comprendre le besoin — invoquer `superpowers:brainstorming`** (questionnement collaboratif, une exploration à la fois : ne pas la redire ici). Chuck y ajoute :
@@ -114,7 +113,7 @@ Décrire le modèle **dans les termes de la persistance du projet** (détectée 
 
 ### 4. Architecture
 
-Lister les fichiers à créer/modifier **par couche, selon la structure de la stack détectée** (voir `skills/john/stacks/<stack>.md` et l'arborescence réelle du projet). Exemple pour une stack Next.js App Router :
+Lister les fichiers à créer/modifier **par couche, selon la structure de la stack détectée** (voir `skills/developer/stacks/<stack>.md` et l'arborescence réelle du projet). Exemple pour une stack Next.js App Router :
 
 | Couche | Emplacement (exemple Next.js) |
 |---|---|
@@ -129,7 +128,7 @@ Lister les fichiers à créer/modifier **par couche, selon la structure de la st
 - Intégrations externes du projet (voir `CLAUDE.md`)
 - **Unités isolées** : chaque fichier = une responsabilité claire, interfaces bien définies
 
-**Conventions :** les règles de code sont dans le skill `john` (et sa bibliothèque `stacks/`). Ne pas les dupliquer ici — les référencer.
+**Conventions :** les règles de code sont dans le skill `developer` (et sa bibliothèque `stacks/`). Ne pas les dupliquer ici — les référencer.
 
 ### 5. UX *(uniquement si la fonctionnalité a une interface — sinon sauter)*
 
@@ -158,16 +157,16 @@ Lister les fichiers à créer/modifier **par couche, selon la structure de la st
 
 ### 7. Plan d'implémentation (writing-plans)
 
-**Le plan doit être actionnable par Morgan ou un développeur sans contexte.**
+**Le plan doit être actionnable par developer ou un développeur sans contexte.**
 
-> **Le squelette ci-dessous est un exemple pour une stack Next.js.** Adapter les phases, les chemins de fichiers, les extensions et les commandes de test/vérification à la **stack détectée** (`skills/john/stacks/<stack>.md`).
+> **Le squelette ci-dessous est un exemple pour une stack Next.js.** Adapter les phases, les chemins de fichiers, les extensions et les commandes de test/vérification à la **stack détectée** (`skills/developer/stacks/<stack>.md`).
 
 > **Variante correction de bug :** ne pas utiliser les phases greenfield ci-dessous. Structurer le plan en : **Tâche 1 — test de régression (RED)** reproduisant le bug → **Tâche 2 — correctif de la cause racine (GREEN)** → **Tâche 3 — vérifications de non-régression**. Même discipline TDD, chemins exacts.
 
 ```markdown
 ## Plan d'implémentation
 
-> **Pour l'exécution :** utiliser `/morgan <chemin-du-document>.md` pour une implémentation autonome.
+> **Pour l'exécution :** utiliser `/developer <chemin-du-document>.md` pour une implémentation autonome.
 
 **Objectif :** <une phrase>
 **Architecture :** <2-3 phrases>
@@ -205,7 +204,7 @@ Lister les fichiers à créer/modifier **par couche, selon la structure de la st
 - [ ] Commit
 ```
 
-**Exigences du plan — invoquer `superpowers:writing-plans`** (chemins exacts, TDD par tâche, pas de placeholders, tâches bite-sized 2-5 min, commandes de vérification avec sortie attendue). L'invoquer, ne pas recopier ses règles. Spécificité ezacae : phases et chemins **adaptés à la stack détectée** (`skills/john/stacks/<stack>.md`) + la variante bug ci-dessus.
+**Exigences du plan — invoquer `superpowers:writing-plans`** (chemins exacts, TDD par tâche, pas de placeholders, tâches bite-sized 2-5 min, commandes de vérification avec sortie attendue). L'invoquer, ne pas recopier ses règles. Spécificité ezacae : phases et chemins **adaptés à la stack détectée** (`skills/developer/stacks/<stack>.md`) + la variante bug ci-dessus.
 
 ### 8. Auto-review
 
@@ -220,7 +219,7 @@ Corriger directement. Pas de re-review.
 
 ### 9. Validation
 
-**Document de conception unique : `docs/conception/<nom>.md`.** Il commence par un titre H1 clair (`# <Titre de la fonctionnalité>`) — Morgan en dérive le nom de branche. La maquette HTML éventuelle est un fichier annexe (`docs/conception/<nom>.mockup.html`) référencé depuis ce `.md`, jamais l'inverse.
+**Document de conception unique : `docs/conception/<nom>.md`.** Il commence par un titre H1 clair (`# <Titre de la fonctionnalité>`) — developer en dérive le nom de branche. La maquette HTML éventuelle est un fichier annexe (`docs/conception/<nom>.mockup.html`) référencé depuis ce `.md`, jamais l'inverse.
 
 - Présenter le document complet
 - Demander validation **avant** implémentation :
@@ -228,7 +227,7 @@ Corriger directement. Pas de re-review.
 > "Conception écrite dans `docs/conception/<nom>.md`. Revois le document et dis-moi si tu veux des modifications avant l'implémentation."
 
 - Si modifications → appliquer et re-présenter
-- Une fois validé, **commiter et pousser** `docs/conception/<nom>.md` (et sa maquette éventuelle) : c'est la précondition pour que morgan, dont le worktree est créé fresh depuis `origin/main`, voie le document. Sans cela, morgan s'arrêtera en signalant le fichier absent.
+- Une fois validé, **commiter et pousser** `docs/conception/<nom>.md` (et sa maquette éventuelle) : c'est la précondition pour que developer, dont le worktree est créé fresh depuis `origin/main`, voie le document. Sans cela, developer s'arrêtera en signalant le fichier absent.
 
 ```bash
 git add docs/conception/<nom>.md docs/conception/<nom>.mockup.html  # maquette si présente
@@ -240,7 +239,7 @@ git push
 
 ```
 ✅ Conception validée et poussée : docs/conception/<nom>.md — type: feature|bug — titre: <H1>
-   Exécution : /morgan docs/conception/<nom>.md  (autonome)  ou  skill john  (interactif)
+   Exécution : /developer docs/conception/<nom>.md  (autonome)
 ```
 
 ## Red Flags — STOP et corriger

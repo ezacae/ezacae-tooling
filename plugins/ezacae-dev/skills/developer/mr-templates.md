@@ -1,4 +1,4 @@
-# Templates Merge Request — Agent Morgan
+# Templates Merge Request — Agent Developer
 
 ## GitLab
 
@@ -33,7 +33,7 @@ glab mr create \
 - [x] TypeCheck OK (`npm run typecheck`) — preuve vérifiée
 - [x] Lint OK (`npm run lint`) — preuve vérifiée
 
-Implementé par Agent Morgan
+Implementé par Agent Developer
 EOF
 )" \
   --target-branch <branche-par-défaut>
@@ -63,7 +63,7 @@ gh pr create \
 - [x] Tests unitaires + intégration
 - [x] Suite verte — preuve vérifiée
 
-Implementé par Agent Morgan
+Implementé par Agent Developer
 EOF
 )" \
   --base <branche-par-défaut>

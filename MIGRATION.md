@@ -32,9 +32,9 @@ Avant toute suppression, confirmer dans une **nouvelle session** :
 
 - [ ] `/help` (ou `/plugin`) liste les commandes `mike`, `mike-po`, `mike-cto`,
       `vision-produit`, `personas-projet`, `processus-projet`, `sarah`, `feature`.
-- [ ] Les skills `chuck`, `john`, `morgan`, `grill-me`, `handoff`, `jira-pipeline`
+- [ ] Les skills `chuck`, `developer`, `grill-me`, `handoff`, `jira-pipeline`
       apparaissent comme disponibles.
-- [ ] Les agents `doc-writer`, `stack-writer`, `morgan`, `john`, `code-simplifier`,
+- [ ] Les agents `doc-writer`, `stack-writer`, `developer`, `code-simplifier`,
       `technical-design-generator` sont dispatchables.
 - [ ] Le contexte de démarrage affiche les lignes injectées par les hooks
       (« Pré-checks pipeline Mike⇄Sarah » et « Plugin ezacae-dev »).
@@ -62,15 +62,16 @@ rm sarah.md feature.md
 
 ```bash
 cd ~/.claude/skills
-rm -rf chuck john morgan grill-me handoff
-rm -f chuck.zip morgan.zip .DS_Store   # artefacts résiduels
+rm -rf chuck developer grill-me handoff
+rm -rf john morgan                     # anciens skills fusionnés dans developer (si copies locales héritées)
+rm -f chuck.zip developer.zip .DS_Store   # artefacts résiduels
 ```
 
 ### Agents (migrés → ezacae-doc / ezacae-dev)
 
 ```bash
 cd ~/.claude/agents
-rm doc-writer.md stack-writer.md morgan.md john.md code-simplifier.md technical-design-generator.md
+rm -f doc-writer.md stack-writer.md developer.md morgan.md john.md code-simplifier.md technical-design-generator.md  # morgan.md/john.md : anciens agents fusionnés dans developer
 ```
 
 ### À CONSERVER dans `~/.claude/` (non packagé)
@@ -127,7 +128,7 @@ Sur un ticket de test (statut `NOUVEAU`) dans un projet migré :
 
 - [ ] `/mike <KEY>` cadre, attache la fiche, transitionne en `CONCEPTION`, passe à Sarah.
 - [ ] `/sarah <KEY>` charge `jira-pipeline`, récupère la fiche via le helper injecté,
-      déroule chuck → morgan/john → revue, synchronise les statuts.
+      déroule chuck → developer → revue, synchronise les statuts.
 - [ ] La garde de statut bloque bien une transition hors séquence.
 - [ ] Retour à `/mike <KEY>` pour la doc finale.
 

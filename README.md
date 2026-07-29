@@ -1,6 +1,6 @@
 # ezacae-claude-tooling
 
-Marketplace interne ezacae de plugins Claude Code. C'est ici que vit l'outillage IA commun distribué aux postes de l'équipe : conventions globales, pipeline JIRA, agents documentaires (Mike) et agents de développement (Sarah, Chuck, John, Morgan).
+Marketplace interne ezacae de plugins Claude Code. C'est ici que vit l'outillage IA commun distribué aux postes de l'équipe : conventions globales, pipeline JIRA, agents documentaires (Mike) et agents de développement (Sarah, Chuck, Developer).
 
 > **Contexte — chantier harnais IA ezacae.** Ce dépôt reflète l'organisation **actuelle** de l'outillage, pendant le cadrage du socle harnais. Les besoins sont validés (CDC v2 du 09/07) et le choix du socle est en cours (comparatif des 5 pistes, recommandation D′ : « les plugins sont un bon canal de livraison, pas un socle ») — voir le dépôt [`harness-doc`](https://gitlab.com/ezacae/harness-doc). Selon la piste retenue, ce dépôt pourra être déménagé, remplacé ou archivé. En attendant, il reste la référence en vigueur.
 
@@ -44,7 +44,7 @@ Les agents qui exécutent ce cycle (Sarah l'orchestrateur, puis les phases conce
 | `ezacae-base` | Instructions globales ezacae (`conventions.md`) injectées en contexte à chaque session via un hook SessionStart — source unique d'équipe, remplace le copier-coller dans chaque `~/.claude/CLAUDE.md` | `0.1.0` |
 | `ezacae-jira` | Infra commune du pipeline JIRA : skill `jira-pipeline`, helpers REST (`jira-attach`/`jira-download`), hooks `SessionStart` (pré-checks Git/JIRA + chemin des helpers), **auto-autorisation des actions JIRA** (aucune validation manuelle) et garde de statut `PreToolUse` | `0.2.0` |
 | `ezacae-doc` | Orchestrateur Mike (PO/CTO) + commandes vision / personas / processus, avec les subagents `doc-writer` et `stack-writer` | `0.3.0` |
-| `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `john`, `morgan`, `grill-me`, `handoff` ; agents **auto-suffisants** `morgan`/`john` + `code-simplifier`, `technical-design-generator` ; hook SessionStart injectant la racine du plugin (conventions de stack) | `0.3.0` |
+| `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `developer`, `grill-me`, `handoff` ; agents `developer` + `code-simplifier`, `technical-design-generator` ; hook SessionStart injectant la racine du plugin (conventions de stack) | `0.4.0` |
 
 `ezacae-doc` et `ezacae-dev` dépendent de `ezacae-jira` **uniquement** pour le mode pipeline JIRA (`/mike <KEY>`, `/sarah <KEY>`). Hors pipeline, les commandes fonctionnent seules.
 
@@ -54,18 +54,17 @@ Les agents qui exécutent ce cycle (Sarah l'orchestrateur, puis les phases conce
 |---|---|
 | Sarah | Orchestrateur du cycle dev : séquence les phases et pose un gate de validation entre chacune |
 | Chuck | Phase **conception** : produit et fait valider le design technique avant tout code |
-| Morgan | Phase **implémentation en mode autonome** : dispatché en sous-agent (contexte isolé), déroule branche + TDD + MR sans interaction |
-| John | Phase **implémentation en mode interactif** : même travail dans le thread principal, peut poser des questions en cours de route |
+| Developer | Phase **implémentation** : unique exécuteur, dispatché en sous-agent worktree isolé, déroule branche + TDD + MR sans interaction. Sous HARD-GATE — toute écriture de code exige une conception (via Chuck) |
 | `code-simplifier`, `technical-design-generator` | Agents de support (revue de simplification, génération de conception technique) |
 
-> Morgan et John font le **même travail d'implémentation** ; ils diffèrent par le mode (autonome vs interactif). Cette distinction et le nommage sont susceptibles d'être simplifiés dans le cadre du chantier harnais (voir bandeau en tête).
+> `developer` remplace l'ancienne paire `morgan`/`john` : un seul exécuteur, un seul flux (autonome), une seule source de vérité pour les conventions de stack. Plus de mode interactif « au fil de l'eau » — tout passe par une conception.
 
 ### Pourquoi `ezacae-dev` embarque la discipline dans les agents
 
 `${CLAUDE_PLUGIN_ROOT}` **n'est pas substitué dans le corps markdown** des commandes/agents/skills (bug connu, [#9354](https://github.com/anthropics/claude-code/issues/9354)) — il ne marche que dans les JSON (`hooks.json`) et comme variable d'env des sous-processus de hooks. Et un sous-agent dispatché ne peut ni invoquer de skill ni lire un fichier du plugin par chemin stable. Conséquences appliquées ici :
 
-- **Agents `morgan`/`john` auto-suffisants** : toute leur discipline (process TDD, détection de stack, conventions Next.js/Flutter, templates MR) est **inline** dans `agents/*.md`. Aucune lecture de fichier externe. Contrepartie assumée : ces conventions existent en double avec les skills `morgan`/`john` (deux sources à maintenir).
-- **Skills en thread principal** (`chuck`, `morgan`, `sarah`) : les références inter-skills à `skills/john/stacks/<stack>.md` sont résolues via le **chemin absolu injecté par le hook SessionStart** d'ezacae-dev. Les références internes de `john` à ses propres `stacks/` restent relatives (fichiers support du skill).
+- **Agent `developer`** : récupère sa discipline à l'exécution — méthode (TDD, vérification, debug) via les skills `superpowers`, conventions de stack via le skill `developer` (`stacks/<stack>.md` lu depuis sa base directory). Un backstop de discipline générale reste inline dans `agents/developer.md` pour ne dépendre d'aucune invocation. Plus de conventions recopiées : `developer` est la source unique.
+- **Skills en thread principal** (`chuck`, `developer`, `sarah`) : les références inter-skills à `skills/developer/stacks/<stack>.md` sont résolues via le **chemin absolu injecté par le hook SessionStart** d'ezacae-dev. Les références internes de `developer` à ses propres `stacks/` restent relatives (fichiers support du skill).
 - **Conventions JIRA** : chargées via le **skill `jira-pipeline`** (invocable par nom, cross-plugin), jamais par chemin.
 
 ## Installation (poste développeur)
@@ -143,8 +142,8 @@ ezacae-claude-tooling/
         ├── .claude-plugin/plugin.json
         ├── hooks/        (hooks.json + session-start-dev.sh)
         ├── commands/     (sarah.md, feature.md)
-        ├── skills/       (chuck, john, morgan, grill-me, handoff)
-        └── agents/       (morgan, john auto-suffisants ; code-simplifier ; technical-design-generator)
+        ├── skills/       (chuck, developer, grill-me, handoff)
+        └── agents/       (developer ; code-simplifier ; technical-design-generator)
 ```
 
 Le dépôt contient aussi `deploy/jira-watcher/` (service de veille JIRA, README dédié dans le dossier) et `docs/` (conceptions, site MkDocs).

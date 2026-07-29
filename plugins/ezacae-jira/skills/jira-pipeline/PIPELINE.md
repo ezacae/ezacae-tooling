@@ -18,12 +18,11 @@ Aucun agent ne devine l'état du travail : **le statut du ticket est la source d
 | **Mike-PO / Mike-CTO** | Commandes | Sous-orchestrateurs produit / technique appelés par Mike (inchangés). |
 | **Sarah** | Commande `/sarah` | Orchestrateur du cycle de dev. Conçoit → implémente → fait reviewer. Ne touche jamais au code elle-même. |
 | **chuck** | Skill | Conception technique (specification + plan TDD). Propriété de l'exploration et du design. |
-| **morgan** | Skill | Implémentation **autonome** guidée par la conception (branche, TDD, push, MR). Sous-agent worktree. |
-| **john** | Skill | Implémentation **interactive** (petite modif / bug sans conception lourde). |
+| **developer** | Skill | Implémentation **autonome** guidée par la conception (branche, TDD, push, MR). Sous-agent worktree. Unique exécuteur — toute écriture de code exige une conception. |
 | **pr-review-toolkit:code-reviewer** | Agent | Revue de code multi-axes sur le diff. Déclenché par Sarah en fin d'implémentation. |
 | **skill `jira-pipeline`** (`SKILL.md`) | Skill (plugin ezacae-jira) | Conventions JIRA **communes** à Mike et Sarah (credentials, transitions, gardes, format de commentaire). Source unique — remplace l'ancien `shared/jira.md`. |
 
-morgan et john restent **inchangés** : toute l'orchestration JIRA vit au niveau de Mike et Sarah.
+developer reste **inchangé** vis-à-vis de JIRA : toute l'orchestration JIRA vit au niveau de Mike et Sarah.
 
 ---
 
@@ -46,7 +45,7 @@ stateDiagram-v2
     CONCEPTION --> CV : chuck conçoit et présente
     CV --> CONCEPTION : refus → itération
     CV --> COK : design validé (.md de conception attaché)
-    COK --> ENCOURS : Sarah lance morgan / john
+    COK --> ENCOURS : Sarah lance developer
     ENCOURS --> EXAMINER : MR créée → revue de code
     EXAMINER --> ENCOURS : findings bloquants
     EXAMINER --> RI : revue OK, handoff Mike
@@ -64,7 +63,7 @@ Le statut du ticket **route** l'agent. À l'entrée, chaque agent vérifie le st
 | Agent | Statut(s) d'activation autorisé(s) | Garde supplémentaire |
 |-------|------------------------------------|----------------------|
 | **Mike** | `NOUVEAU`, `CADRAGE` **ou** `RECETTE INTERNE` | Sur `NOUVEAU`, passe le ticket en `CADRAGE` dès le début du cadrage |
-| **Sarah** | `CONCEPTION` | Ne lance **morgan / john** que si le ticket est passé à **`CONCEPTION OK`** |
+| **Sarah** | `CONCEPTION` | Ne lance **developer** que si le ticket est passé à **`CONCEPTION OK`** |
 
 Conséquence : c'est **le statut qui décide du point d'entrée**. Sur un ticket existant (UC2), appeler `/mike` ne fait quelque chose que si le ticket est `NOUVEAU`/`CADRAGE`/`RECETTE INTERNE` ; `/sarah` ne fait quelque chose que sur `CONCEPTION`.
 
@@ -84,7 +83,7 @@ Ces gardes ne reposent pas que sur la discipline des agents : deux **hooks Claud
 | `CONCEPTION → CONCEPTION VALIDATION` | Sarah (chuck) | Quand le design est présenté pour validation |
 | `CONCEPTION VALIDATION → CONCEPTION` | Sarah | Si l'utilisateur refuse le design (itération) |
 | `CONCEPTION VALIDATION → CONCEPTION OK` | Sarah | Design validé par l'utilisateur |
-| `CONCEPTION OK → EN COURS` | Sarah | Lancement de morgan / john |
+| `CONCEPTION OK → EN COURS` | Sarah | Lancement de developer |
 | `EN COURS → EXAMINER` | Sarah | MR créée, début de la revue |
 | `EXAMINER → EN COURS` | Sarah | Findings bloquants à corriger |
 | `EXAMINER → RECETTE INTERNE` | Sarah | Revue OK, avant de rendre la main à Mike |
@@ -103,7 +102,7 @@ sequenceDiagram
     participant J as JIRA
     participant S as Sarah
     participant CH as chuck
-    participant MO as morgan / john
+    participant MO as developer
     participant R as code-reviewer
 
     U->>M: "ajoute une fonctionnalité" (UC1) / clé de ticket (UC2)
@@ -152,7 +151,7 @@ sequenceDiagram
 4. Mike produit une **fiche de cadrage fonctionnel** (le « fichier de résultat »), l'**attache** au ticket, le **transitionne** en `CONCEPTION`, **commente** la passation, puis **invoque `/sarah <KEY>`**.
 5. **Sarah** vérifie le statut (`CONCEPTION`), **télécharge** la fiche de Mike, et la passe à **chuck**.
 6. chuck conçoit → `CONCEPTION VALIDATION` → l'utilisateur valide → Sarah **attache** le `.md` de conception et transitionne en `CONCEPTION OK`.
-7. Sarah lance **morgan** (ou **john**) → `EN COURS` → MR → Sarah **lie la MR** et transitionne en `EXAMINER`.
+7. Sarah lance **developer** → `EN COURS` → MR → Sarah **lie la MR** et transitionne en `EXAMINER`.
 8. Sarah déclenche **pr-review-toolkit:code-reviewer** sur le diff → **poste le rapport** sur le ticket.
 9. Sarah transitionne en `RECETTE INTERNE` et **redéclenche Mike** (`/mike <KEY>`).
 10. Mike vérifie le statut (`RECETTE INTERNE`), **met à jour la documentation finale**, l'attache, commente. Le ticket reste `RECETTE INTERNE` pour la recette humaine.
