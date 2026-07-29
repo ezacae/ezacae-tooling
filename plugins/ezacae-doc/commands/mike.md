@@ -146,7 +146,7 @@ Présenter un état des lieux :
 
 ⬜ Manquant (2)
   → docs/02_architecture/architecture.md
-  → docs/02_architecture/authentification.md
+  → docs/02_architecture/auth.md
 
 ➖ Non applicable (2)
   → api-endpoints

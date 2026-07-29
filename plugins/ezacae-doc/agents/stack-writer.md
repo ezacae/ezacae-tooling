@@ -1,7 +1,7 @@
 ---
 name: stack-writer
 model: claude-haiku-4-5-20251001
-description: Met à jour un document technique (architecture.md, auth.md, bdd.md, api-endpoints.md, deploiement.md, ecrans-ui.md) selon des instructions précises fournies par l'orchestrateur /mike-cto. Respecte strictement les conventions ezacae techniques.
+description: Met à jour un document technique du projet (architecture, données, exploitation) selon des instructions précises fournies par l'orchestrateur /mike-cto. La liste des documents couverts fait autorité dans references/stack-templates.md. Respecte strictement les conventions ezacae techniques.
 tools:
   - Read
   - Write
