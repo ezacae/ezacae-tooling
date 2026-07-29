@@ -6,10 +6,7 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../scripts/jira-lib.sh"
-PASS=0; FAIL=0
-
-ok()   { echo "PASS  $1"; PASS=$((PASS+1)); }
-nope() { echo "FAIL  $1"; FAIL=$((FAIL+1)); }
+. "$HERE/harness.sh"
 
 # --- Non-régression : sortie identique OCTET POUR OCTET aux références figées ---
 # Un texte sans aucune syntaxe de mise en forme doit produire exactement ce que
@@ -149,6 +146,16 @@ set -e' \
    and .content[0].content[0].text=="```bash"
    and .content[1].content[0].text=="set -e"'
 
+# Espaces écrits en \x20 : un éditeur ou un hook de format effacerait des espaces
+# de fin invisibles dans le source, et le test ne testerait plus rien.
+FENCE_SPACED=$'```\x20\x20\x20bash\x20\x20\x20\necho ok\n```'
+expect_shape "langage du bloc de code entièrement détrimé" "$FENCE_SPACED" \
+  '.content[0].attrs.language=="bash"'
+
+FENCE_BLANK=$'```\x20\x20\x20\necho ok\n```'
+expect_shape "langage réduit à des espaces : aucun attrs" "$FENCE_BLANK" \
+  '.content[0].type=="codeBlock" and (.content[0]|has("attrs")|not)'
+
 # --- Validité structurelle -----------------------------------------------------
 # Sous-ensemble des règles d'imbrication de Jira : première cause de refus d'envoi.
 expect_valid() {
@@ -199,6 +206,4 @@ else
   nope "jira-lib.sh écrit au chargement : $LOAD_OUT"
 fi
 
-echo "----"
-echo "Résultat : PASS=$PASS FAIL=$FAIL"
-[ "$FAIL" -eq 0 ]
+test_summary

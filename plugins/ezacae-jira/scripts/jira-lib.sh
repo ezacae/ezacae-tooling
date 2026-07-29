@@ -178,6 +178,9 @@ JIRA_JQ_TEXT_TO_ADF='
   def para($s): if $s == "" then {type:"paragraph"}
                 else {type:"paragraph",content:[{type:"text",text:$s}]} end;
   def heading($lvl; $s): {type:"heading",attrs:{level:$lvl},content:[{type:"text",text:$s}]};
+  # ⚠️ La forme produite par item() et code() est vérifiée par JIRA_JQ_ADF_VALID
+  # (plus bas). Toute évolution ici doit y être répercutée, sinon le filet de
+  # sécurité dégrade à tort ou laisse passer une structure réellement invalide.
   def item($s): {type:"listItem",content:[para($s)]};
   def code($lang; $lines):
     {type:"codeBlock"}
@@ -215,8 +218,10 @@ JIRA_JQ_TEXT_TO_ADF='
              | .mode = "none" | .buf = [] | .lang = "" | .raw = ""
            else .buf += [$line] end)
         elif $fence != null then
+          # gsub et non ltrimstr/rtrimstr : ces derniers ne retirent QU UNE
+          # occurrence, donc "```   bash" laissait language = "  bash".
           flush | .mode = "fence" | .buf = []
-          | .lang = ($fence.lang | ltrimstr(" ") | rtrimstr(" ")) | .raw = $line
+          | .lang = ($fence.lang | gsub("^\\s+|\\s+$";"")) | .raw = $line
         elif $head != null then flush | .out += [heading(($head.h|length); $head.t)]
         elif $bul != null then
           (if .mode == "bullet" then . else flush | .mode = "bullet" end)
@@ -232,6 +237,9 @@ JIRA_JQ_TEXT_TO_ADF='
 
 # Invariants de validité ADF vérifiables hors-ligne (sous-ensemble couvrant nos
 # erreurs possibles, pas le schéma officiel de Jira). Booléen sur stdout.
+#
+# ⚠️ Ces règles décrivent la forme produite par item() et code() dans
+# JIRA_JQ_TEXT_TO_ADF (plus haut) : les deux évoluent ensemble.
 JIRA_JQ_ADF_VALID='
   ([.. | objects | select(.type=="text") | select((.text // "") == "")] | length) == 0
   and ([.. | objects | select(.type=="listItem") | (.content // [])[]

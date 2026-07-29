@@ -6,7 +6,7 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../scripts/jira-lib.sh"
-PASS=0; FAIL=0
+. "$HERE/harness.sh"
 
 # render <doc-json> → texte rendu.
 # JIRA_JQ_ADF_RENDER se termine par un ';' : le corps se concatène SANS barre
@@ -18,10 +18,10 @@ expect_contains() {
   local label="$1" doc="$2" want="$3" got
   got=$(render "$doc")
   if [[ "$got" == *"$want"* ]]; then
-    echo "PASS  $label"; PASS=$((PASS+1))
+    ok "$label"
   else
-    echo "FAIL  $label — attendu «$want» dans :"; printf '%s\n' "$got" | sed 's/^/      /'
-    FAIL=$((FAIL+1))
+    nope "$label — attendu «$want» dans le rendu"
+    printf '%s\n' "$got" | sed 's/^/      /'
   fi
 }
 
@@ -89,9 +89,9 @@ ROUND=$(jira_text_to_adf < "$HERE/fixtures/reference.md" | jq -r "$JIRA_JQ_ADF_R
 roundtrip() {
   local label="$1" want="$2"
   if [[ "$ROUND" == *"$want"$'\n'* || "$ROUND" == *"$want" ]]; then
-    echo "PASS  aller-retour — $label"; PASS=$((PASS+1))
+    ok "aller-retour — $label"
   else
-    echo "FAIL  aller-retour — $label (absent : «$want»)"; FAIL=$((FAIL+1))
+    nope "aller-retour — $label (absent : «$want»)"
   fi
 }
 roundtrip "titre de niveau 2"  '## Périmètre retenu'
@@ -103,9 +103,9 @@ roundtrip "glob intact"        'Gras, italique et liens. Un chemin comme plugins
 
 # Aucun bloc collé : jamais deux blocs sans séparation.
 if printf '%s' "$ROUND" | grep -q 'retenuÉcriture'; then
-  echo "FAIL  aller-retour — blocs collés"; FAIL=$((FAIL+1))
+  nope "aller-retour — blocs collés"
 else
-  echo "PASS  aller-retour — blocs séparés"; PASS=$((PASS+1))
+  ok "aller-retour — blocs séparés"
 fi
 
 # Séparation SIMPLE : les paragraphes vides du texte source ne doivent pas
@@ -115,11 +115,9 @@ fi
 MAXBLANK=$(printf '%s\n' "$ROUND" \
   | awk 'BEGIN{m=0;c=0} /^$/{c++; if(c>m)m=c; next} {c=0} END{print m}')
 if [ "$MAXBLANK" -le 1 ]; then
-  echo "PASS  aller-retour — une seule ligne blanche entre blocs"; PASS=$((PASS+1))
+  ok "aller-retour — une seule ligne blanche entre blocs"
 else
-  echo "FAIL  aller-retour — $MAXBLANK lignes blanches consécutives"; FAIL=$((FAIL+1))
+  nope "aller-retour — $MAXBLANK lignes blanches consécutives"
 fi
 
-echo "----"
-echo "Résultat : PASS=$PASS FAIL=$FAIL"
-[ "$FAIL" -eq 0 ]
+test_summary
