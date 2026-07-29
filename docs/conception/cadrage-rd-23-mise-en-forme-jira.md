@@ -26,20 +26,28 @@ Le diagnostic du ticket a été confirmé dans le code, à l'endroit annoncé.
 **Côté écriture — 5 commandes concernées, toutes celles qui écrivent du texte :**
 `jira-comment.sh`, `jira-create.sh`, `jira-edit.sh`, `jira-transition.sh` (son option `--comment`). Toutes passent par la même fonction : la corriger une fois les couvre toutes.
 
-Constructions à couvrir — le sous-ensemble réellement utilisé dans nos commentaires de pipeline, pas davantage :
+Constructions à couvrir — **uniquement celles qui s'ancrent en début de ligne** :
 
 1. titres (deux niveaux) ;
 2. listes à puces ;
 3. listes numérotées ;
-4. blocs de code ;
-5. gras et italique ;
-6. liens.
+4. blocs de code.
 
 Les paragraphes et les lignes vides continuent de fonctionner comme aujourd'hui.
 
-**Côté lecture — une seule commande concernée :** `jira-get.sh`. Objectif : un commentaire de 40 lignes reste lisible dans le terminal, avec ses frontières de blocs visibles — une séparation entre paragraphes, un repère par élément de liste, une délimitation pour les blocs de code. `jira-search.sh` n'affiche pas de texte riche : il n'est pas concerné.
+**Côté lecture — une seule commande concernée :** `jira-get.sh`. Objectif : un commentaire de 40 lignes reste lisible dans le terminal, avec ses frontières de blocs visibles — une séparation entre paragraphes, un repère par élément de liste, une délimitation pour les blocs de code. Deuxième exigence, distincte : **ne jamais jeter un type de contenu inconnu**. Le défaut existe déjà — une carte de ticket liée disparaît aujourd'hui à la lecture (`The linked issue -  has been resolved`, la clé manque), et un rendu qui ne connaîtrait que les blocs listés ci-dessus aggraverait la perte. `jira-search.sh` n'affiche pas de texte riche : il n'est pas concerné.
 
-**Hors périmètre**, volontairement : tableaux, cartes de ticket intégrées, encarts, mentions d'utilisateur, images. Ces constructions ne servent pas dans nos commentaires de pipeline ; les ajouter élargirait le chantier sans bénéfice constaté.
+## Gras, italique et liens : exclus, et pourquoi (arbitrage du 29/07)
+
+Le besoin initial demandait aussi le gras, l'italique et les liens. Ils sont **retirés du périmètre**.
+
+Ces trois constructions obligent à chercher des paires de signes **au milieu des phrases**, là où les quatre retenues se lisent au premier caractère de la ligne. Or nos textes sont saturés de ces signes sans intention de mise en forme : noms de fichiers en `snake_case`, chemins, globs. Le résultat serait une corruption **silencieuse** de notre propre vocabulaire — `jira_text_to_adf` rendu « jira » + *text* + « to_adf », `plugins/**/*` privé de ses étoiles. Aucune erreur, aucun signal : le texte part faux. Un identifiant erroné dans un commentaire de passation, c'est exactement le coût que ce ticket entend supprimer.
+
+Le critère « une syntaxe non supportée dégrade proprement » ne couvre pas ce cas : il ne s'agit pas de syntaxe non supportée, mais de syntaxe supportée reconnue par accident.
+
+Si le besoin de gras devient réel, le bon chemin n'est pas d'ajouter des règles maison mais de reprendre un convertisseur Markdown existant — ce qui suppose d'abandonner la compatibilité stricte au caractère près. C'est un arbitrage plus large que ce ticket, à traiter séparément.
+
+**Aussi hors périmètre** : tableaux, cartes de ticket intégrées, encarts, mentions d'utilisateur, images. Ces constructions ne servent pas à l'écriture dans nos commentaires de pipeline ; elles doivent en revanche rester **lisibles** (cf. exigence de non-perte ci-dessus).
 
 ## Qui est impacté
 
@@ -61,9 +69,12 @@ Le pipeline JIRA de bout en bout, à chaque point où du texte circule :
 1. **Non-régression stricte.** Un texte sans aucune syntaxe de mise en forme doit produire exactement le même résultat qu'aujourd'hui. C'est vérifiable au caractère près, et ça doit l'être.
 2. **Aucun changement de signature.** Les appels existants — dans les scripts, les skills, les commandes, le watcher — ne changent pas. La correction est interne.
 3. **Dégradation propre.** Une syntaxe non supportée s'affiche comme du texte ordinaire. Elle ne fait jamais échouer un envoi : perdre un commentaire de passation coûte plus cher que le voir mal mis en forme.
-4. **Tests hors-ligne.** Aucun appel réseau, sur le modèle des tests existants du plugin (`plugins/ezacae-jira/tests/test_jira_guard.sh`).
+4. **Tests hors-ligne.** Aucun appel réseau, sur le modèle des tests existants du plugin (`plugins/ezacae-jira/tests/test_jira_guard.sh`). L'acceptation par Jira ne peut pas être prouvée hors-ligne : elle fait l'objet d'une vérification manuelle documentée dans la merge request, distincte de la suite de tests.
 5. **Caractères qui cassent le transport.** Guillemets, antislashs, accolades et emoji doivent être couverts par les tests — nos commentaires en contiennent systématiquement (les préfixes 🤖, les chemins, les extraits de code).
 6. **Double correction côté lecture.** Le filtre dupliqué dans `jira-get.sh` impose de traiter les deux occurrences, ou de les factoriser.
+7. **Ordre des travaux imposé.** La référence de non-régression doit être figée **avant** toute modification de la fonction. Sinon la référence devient la nouvelle sortie et le test passe au vert sans rien garantir.
+8. **Un envoi refusé ne doit pas casser une passation.** Dans `jira-transition.sh`, le commentaire est posté *après* le changement de statut. Un envoi refusé laisse donc le ticket transitionné sans commentaire, et la garde interdit de rejouer la transition : la passation est perdue et se répare à la main. Le risque est nul aujourd'hui (le résultat produit est trivialement valide) ; enrichir l'écriture le rend possible. Le correctif doit garantir qu'un refus ne détruit pas la passation.
+9. **Rien ne s'exécute automatiquement.** Aucun job d'intégration continue ne lance les tests shell du dépôt : les six fichiers existants tournent à la main. Toute la garantie de ce ticket repose donc sur un test que personne n'exécute. À traiter, ici ou dans un ticket dédié.
 
 ## Ce qui reste à trancher en conception
 
@@ -71,11 +82,15 @@ Ces points relèvent de chuck, pas du cadrage :
 
 - où vit le convertisseur et sous quelle forme (la fonction actuelle est un filtre `jq` d'une dizaine de lignes ; la cible est nettement plus large) ;
 - comment matérialiser les frontières de blocs à la lecture (choix d'affichage, pas de règle métier) ;
-- comment prouver la non-régression au caractère près sur un corpus de textes plats représentatifs.
+- comment prouver la non-régression au caractère près sur un corpus de textes plats représentatifs ;
+- l'imbrication exacte attendue par Jira pour les listes et les blocs de code — première cause de refus d'envoi ;
+- la règle de précédence des blocs de code : à l'intérieur d'un bloc, aucune ligne ne doit être promue (sinon un extrait de commande shell voit ses commentaires devenir des titres et ses options devenir des puces) ;
+- la contrainte de silence de `jira-lib.sh` au chargement : le hook `jira-guard.sh` lit son propre affichage comme du JSON, donc tout message ajouté au chargement casserait toutes les opérations Jira du dépôt.
 
 ## Dépendances
 
 - **RD-13 (socle harnais)** — indépendant. Le défaut est dans l'outillage existant, quelle que soit la piste de socle retenue. Rien n'attend cette décision.
+- **Ticket compagnon à créer — rédaction des textes Jira.** Ce ticket livre le *plancher* : l'outil sait produire de la structure. Il ne dit rien de ce que les agents écrivent. Or le vrai obstacle à la lecture est le volume : la description d'origine de RD-23 faisait 48 paragraphes, avec la demande au tiers du texte et un détail redit dans la pièce jointe. Un pavé bien typographié reste un pavé. Le compagnon traite les gabarits de Mike et Sarah : demande en tête, plafond de longueur, détail en pièce jointe et uniquement là. Les deux sont séparés pour rester relisables ; le compagnon n'est applicable qu'une fois ce ticket livré.
 - **RD-17** — c'est le ticket sur lequel le pavé illisible a été constaté ; il est aujourd'hui en recette interne. Aucune dépendance technique, seulement l'origine du signalement.
 
 ## Contournement en attendant
