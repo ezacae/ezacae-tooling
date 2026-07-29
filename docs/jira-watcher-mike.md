@@ -3,7 +3,7 @@
 > **Statut** : Brouillon (conception)
 > **Type** : feature
 > **Auteur** : chuck (pipeline Sarah)
-> **Cible d'exécution** : `/morgan docs/jira-watcher-mike.md`
+> **Cible d'exécution** : `/developer docs/jira-watcher-mike.md`
 
 ## 1. Objectif
 
@@ -35,7 +35,7 @@ Le composant est packagé en image conteneur, déployé via **ArgoCD**, et décl
 | Périmètre de `/mike` | **Comportement nominal** : cadrage → `CONCEPTION` → `/sarah` (cycle complet autonome) | Choix utilisateur. Aucun garde-fou de périmètre ; `mike.md` non modifié. ⚠️ runs potentiellement longs (cf. §8). |
 | Emplacement | **`deploy/jira-watcher/`** dans ce repo | Choix utilisateur. ArgoCD pointe sur `deploy/jira-watcher/k8s`. |
 
-**Point ouvert assumé** : aucune `skills/john/stacks/<stack>.md` n'existe pour un profil
+**Point ouvert assumé** : aucune `skills/developer/stacks/<stack>.md` n'existe pour un profil
 « infra Python + Kubernetes ». On s'aligne sur les conventions du repo (style des scripts
 Bash existants, commentaires en français, `set -euo pipefail` côté shell). À créer
 ultérieurement si l'équipe industrialise ce type de livrable.
@@ -204,7 +204,7 @@ flowchart TD
 | Risque | Impact | Mitigation |
 |---|---|---|
 | **Expiration token OAuth Claude / MCP** | le cron échoue silencieusement | Détecter l'erreur d'auth → code sortie ≠ 0 + log explicite (déclenche alerte) ; **procédure de renouvellement** documentée ; envisager un check de validité en début de run. |
-| Cycle complet autonome (`/mike`→`/sarah`→`morgan`→MR) déclenché sans relecture humaine | sur-automatisation / MR non souhaitées | Allowlist stricte de projets (ConfigMap) + étiquette `claude` explicite par ticket + plafond `max_issues_per_run` + surveillance des logs. C'est le comportement **voulu** : maîtrisé par qui pose l'étiquette `claude`. |
+| Cycle complet autonome (`/mike`→`/sarah`→`developer`→MR) déclenché sans relecture humaine | sur-automatisation / MR non souhaitées | Allowlist stricte de projets (ConfigMap) + étiquette `claude` explicite par ticket + plafond `max_issues_per_run` + surveillance des logs. C'est le comportement **voulu** : maîtrisé par qui pose l'étiquette `claude`. |
 | Run long (cycle complet) > 15 min | recouvrement de cron | `concurrencyPolicy: Forbid` + `activeDeadlineSeconds` calé sur `claude_timeout_seconds` (60 min). |
 | Ticket claimé puis `/mike` échoue | ticket non cadré | Log erreur ciblé ; reprise manuelle (retrait label). |
 | Dérive des noms de statut (casse) | JQL ne matche pas | Statuts dans la ConfigMap (modifiables sans rebuild) ; JQL insensible documenté. |
@@ -219,7 +219,7 @@ flowchart TD
 
 ## Plan d'implémentation
 
-> **Pour l'exécution :** `/morgan docs/jira-watcher-mike.md` (autonome, TDD).
+> **Pour l'exécution :** `/developer docs/jira-watcher-mike.md` (autonome, TDD).
 
 **Objectif :** un watcher Python testé + son packaging conteneur + ses manifestes
 ArgoCD/Kubernetes, lançant `/mike <clé>` (comportement nominal) sur les tickets `NOUVEAU+claude`.
