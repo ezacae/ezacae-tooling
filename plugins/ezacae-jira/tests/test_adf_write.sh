@@ -189,6 +189,16 @@ else
   nope "filet de sécurité — texte=«$fb_txt» stderr=«$fb_err»"
 fi
 
+# --- Silence au chargement -----------------------------------------------------
+# Le hook jira-guard.sh parse son propre stdout en JSON : si jira-lib.sh écrit
+# quoi que ce soit au chargement, TOUTES les opérations JIRA du dépôt cassent.
+LOAD_OUT=$(bash -c '. "'"$HERE"'/../scripts/jira-lib.sh"' 2>/dev/null)
+if [ -z "$LOAD_OUT" ]; then
+  ok "jira-lib.sh est muet au chargement"
+else
+  nope "jira-lib.sh écrit au chargement : $LOAD_OUT"
+fi
+
 echo "----"
 echo "Résultat : PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
