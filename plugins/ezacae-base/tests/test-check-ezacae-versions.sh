@@ -235,6 +235,44 @@ JSON
 
 t2_2
 
+# =====================================================================
+# Tâche 2.3 : arborescence attendue absente de l'instantané → incapacité.
+# La lecture de la référence suppose que l'instantané contient
+# l'arborescence du dépôt (versions.lock à sa racine,
+# plugins/<nom>/.claude-plugin/plugin.json) — vrai pour nos plugins
+# internes, pas pour un marketplace externe (ex. claude-plugins-official,
+# qui ne recopie pas les plugins externes sous plugins/).
+# =====================================================================
+t2_3() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  local snap="$home/marketplaces/ezacae-claude-tooling"
+  mkdir -p "$snap"
+  mkdir -p "$home"
+
+  cat > "$home/known_marketplaces.json" <<JSON
+{
+  "$MARKETPLACE": {
+    "source": { "source": "git", "url": "git@example.invalid:ezacae/ezacae-claude-tooling.git" },
+    "installLocation": "$snap",
+    "lastUpdated": "2099-01-01T00:00:00.000Z"
+  }
+}
+JSON
+  # Ni versions.lock, ni plugins/<nom>/.claude-plugin/plugin.json dans
+  # l'instantané : structure absente, pas seulement vieille.
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  nonempty "2.3 arborescence absente → sortie non vide" "$out"
+  refutes  "2.3 arborescence absente → ne conclut jamais « à jour »" "à jour" "$out"
+  eq       "2.3 arborescence absente → exit 0" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t2_3
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
