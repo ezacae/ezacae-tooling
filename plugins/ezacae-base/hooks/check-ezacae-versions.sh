@@ -88,4 +88,45 @@ if [ "$source_type" = "directory" ]; then
   exit 0
 fi
 
+install_location="$(jq -r '.installLocation // empty' <<< "$entry" 2>/dev/null)"
+last_updated="$(jq -r '.lastUpdated // empty' <<< "$entry" 2>/dev/null)"
+
+[ -n "$install_location" ] && [ -n "$last_updated" ] \
+  || incapacite "entrée « $MARKETPLACE » incomplète (installLocation/lastUpdated) dans $KM"
+
+# Règle 3 : la version attendue se lit ICI — dans versions.lock au sommet de
+# l'instantané du marketplace — jamais dans la copie installée (cache), qui
+# porte sa propre référence embarquée mais figée avec elle-même.
+REF_LOCK="$install_location/versions.lock"
+
+[ -s "$REF_LOCK" ] || incapacite "$REF_LOCK introuvable dans l'instantané du marketplace"
+
+warnings=""
+add_warning() { warnings="${warnings}$1
+"; }
+
+while IFS=' ' read -r plugin expected _rest; do
+  [ -z "$plugin" ] && continue
+  case "$plugin" in
+    \#*) continue ;;
+  esac
+
+  plugin_cache="$PLUGINS_HOME/cache/$MARKETPLACE/$plugin"
+  installed_dir=""
+  if [ -d "$plugin_cache" ]; then
+    installed_dir="$(find "$plugin_cache" -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
+      | sed 's#.*/##' | sort -V | tail -1)"
+  fi
+
+  if [ -z "$installed_dir" ]; then
+    continue
+  fi
+
+  if [ "$installed_dir" != "$expected" ]; then
+    add_warning "⚠️  ezacae-base : dérive de version « $plugin » — attendue $expected (instantané du marketplace), installée $installed_dir."
+  fi
+done < "$REF_LOCK"
+
+[ -n "$warnings" ] && printf '%s' "$warnings"
+
 exit 0

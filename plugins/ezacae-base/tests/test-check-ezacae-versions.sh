@@ -137,6 +137,53 @@ JSON
 
 t1_4
 
+# =====================================================================
+# Tâche 2.1 : la référence se lit dans l'instantané du marketplace, jamais
+# dans la copie installée (règle 3). Aucune variable d'environnement ne
+# désigne la référence : elle n'est plaçable qu'à l'endroit réel.
+# =====================================================================
+t2_1() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  local snap="$home/marketplaces/ezacae-claude-tooling"
+  mkdir -p "$snap/plugins/ezacae-doc/.claude-plugin"
+  mkdir -p "$home"
+
+  # lastUpdated confortablement postérieur à la copie installée : cette
+  # tâche ne teste pas encore la fraîcheur (tâche 2.2), juste la source lue.
+  cat > "$home/known_marketplaces.json" <<JSON
+{
+  "$MARKETPLACE": {
+    "source": { "source": "git", "url": "git@example.invalid:ezacae/ezacae-claude-tooling.git" },
+    "installLocation": "$snap",
+    "lastUpdated": "2099-01-01T00:00:00.000Z"
+  }
+}
+JSON
+
+  # La vraie référence : ezacae-doc 0.3.2, dans l'instantané.
+  printf 'ezacae-doc 0.3.2\n' > "$snap/versions.lock"
+  printf '{ "name": "ezacae-doc", "version": "0.3.2" }\n' > "$snap/plugins/ezacae-doc/.claude-plugin/plugin.json"
+
+  # La copie installée : version 0.1.0, avec sa propre référence embarquée
+  # (son propre plugin.json) qui se contredit forcément avec la vraie
+  # référence — c'est la référence « figée avec la copie installée » que la
+  # règle 3 interdit de lire (elle vaudrait toujours 0.1.0 == 0.1.0 installé).
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0/.claude-plugin"
+  printf '{ "name": "ezacae-doc", "version": "0.1.0" }\n' > "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0/.claude-plugin/plugin.json"
+  touch -t 201001010000 "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0" 2>/dev/null
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  contains "2.1 référence lue dans l'instantané → 0.3.2 retenu (pas 0.1.0 de la copie installée)" "0.3.2" "$out"
+  contains "2.1 dérive détectée nomme le plugin" "ezacae-doc" "$out"
+  eq       "2.1 exit 0" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t2_1
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
