@@ -153,6 +153,8 @@ while IFS=' ' read -r plugin expected _rest; do
   fi
 
   if [ -z "$installed_dir" ]; then
+    add_warning "⚠️  ezacae-base : plugin « $plugin » attendu (versions.lock) mais absent du poste.
+    Installe-le : claude plugin install $plugin@$MARKETPLACE"
     continue
   fi
 

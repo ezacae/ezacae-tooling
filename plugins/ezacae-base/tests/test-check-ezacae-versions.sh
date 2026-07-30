@@ -336,6 +336,26 @@ t3_2() {
 
 t3_2
 
+# =====================================================================
+# Tâche 3.3 : plugin absent → commande d'installation
+# =====================================================================
+t3_3() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  # Pas de cache du tout pour ce plugin : absent du poste.
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  contains "3.3 absent → commande d'installation" "claude plugin install" "$out"
+  contains "3.3 absent → nomme le plugin" "ezacae-doc" "$out"
+  eq       "3.3 absent → exit 0" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t3_3
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
