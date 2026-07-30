@@ -587,6 +587,66 @@ t_a2() {
 
 t_a2
 
+# ---------------------------------------------------------------------
+# Tâche A.3 : le préfixe d'avertissement doit appartenir à la fonction
+# qui construit le message, pas à chaque appelant. Comme pour A.2, les
+# messages actuels sont déjà, aujourd'hui, correctement préfixés (la
+# duplication n'a pas encore divergé) : le verrou structurel (occurrence
+# unique du préfixe littéral dans la source) est donc l'assertion qui
+# distingue vraiment l'avant du après. Le verrou fonctionnel (chaque
+# première ligne d'avertissement commence par le préfixe, tous chemins
+# de code confondus) complète en verrouillant le comportement observable.
+# =====================================================================
+t_a3() {
+  local prefix="⚠️  ezacae-base : "
+
+  local occurrences
+  occurrences="$(grep -o -- "$prefix" "$SCRIPT" | wc -l | tr -d ' ')"
+  eq "A.3 préfixe écrit une seule fois dans la source (fonction d'émission)" "1" "$occurrences"
+
+  local tmp home out first_line got
+
+  # add_warning : plugin absent
+  tmp="$(mktemp -d)"; home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  out=$(run_check "$home")
+  first_line="$(printf '%s' "$out" | head -1)"
+  case "$first_line" in "$prefix"*) got="$prefix" ;; *) got="$first_line" ;; esac
+  eq "A.3 préfixe — plugin absent" "$prefix" "$got"
+  rm -rf "$tmp"
+
+  # add_warning : version non sémantique
+  tmp="$(mktemp -d)"; home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/unknown/commands"
+  out=$(run_check "$home")
+  first_line="$(printf '%s' "$out" | head -1)"
+  case "$first_line" in "$prefix"*) got="$prefix" ;; *) got="$first_line" ;; esac
+  eq "A.3 préfixe — version non sémantique" "$prefix" "$got"
+  rm -rf "$tmp"
+
+  # add_warning : dérive de version
+  tmp="$(mktemp -d)"; home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0/commands"
+  out=$(run_check "$home")
+  first_line="$(printf '%s' "$out" | head -1)"
+  case "$first_line" in "$prefix"*) got="$prefix" ;; *) got="$first_line" ;; esac
+  eq "A.3 préfixe — dérive de version" "$prefix" "$got"
+  rm -rf "$tmp"
+
+  # incapacite : jq absent
+  tmp="$(mktemp -d)"
+  local emptybin="$tmp/emptybin"; mkdir -p "$emptybin"
+  out=$(EZACAE_PLUGINS_HOME="$tmp/plugins" PATH="$emptybin" "$BASH_BIN" "$SCRIPT" 2>&1)
+  first_line="$(printf '%s' "$out" | head -1)"
+  case "$first_line" in "$prefix"*) got="$prefix" ;; *) got="$first_line" ;; esac
+  eq "A.3 préfixe — jq absent (incapacite)" "$prefix" "$got"
+  rm -rf "$tmp"
+}
+
+t_a3
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1

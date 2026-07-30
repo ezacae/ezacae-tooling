@@ -109,8 +109,12 @@ if [ "$check" -eq 1 ]; then
 fi
 
 # --- Mode session -----------------------------------------------------
+# Préfixe d'avertissement : appartient à la fonction qui construit le
+# message (ici et add_warning() plus bas), jamais recopié par un appelant.
+WARN_PREFIX="⚠️  ezacae-base : "
+
 incapacite() {
-  echo "⚠️  ezacae-base : $1 — le contrôle de dérive de version des plugins ezacae est inopérant."
+  echo "${WARN_PREFIX}$1 — le contrôle de dérive de version des plugins ezacae est inopérant."
   exit 0
 }
 
@@ -200,7 +204,7 @@ lu_epoch="$(epoch_of_iso "$last_updated")"
 [ -n "$lu_epoch" ] || incapacite "date « $last_updated » illisible (lastUpdated) dans $KM"
 
 warnings=""
-add_warning() { warnings="${warnings}$1
+add_warning() { warnings="${warnings}${WARN_PREFIX}$1
 "; }
 
 details=""
@@ -257,14 +261,14 @@ while IFS=' ' read -r plugin expected _rest; do
   fi
 
   if [ -z "$installed_dir" ]; then
-    add_warning "⚠️  ezacae-base : plugin « $plugin » attendu (versions.lock) mais absent du poste.
+    add_warning "plugin « $plugin » attendu (versions.lock) mais absent du poste.
     Installe-le : claude plugin install $plugin@$MARKETPLACE"
     [ "$detail" -eq 1 ] && add_detail "    $plugin : attendu $expected — absent du cache ($plugin_cache)"
     continue
   fi
 
   if ! is_semver "$installed_dir"; then
-    add_warning "⚠️  ezacae-base : version installée de « $plugin » indéterminée ($installed_dir) — impossible de la comparer à la référence attendue."
+    add_warning "version installée de « $plugin » indéterminée ($installed_dir) — impossible de la comparer à la référence attendue."
     [ "$detail" -eq 1 ] && add_detail "    $plugin : attendu $expected — installé $installed_dir (non sémantique, $plugin_cache/$installed_dir)"
     continue
   fi
@@ -275,14 +279,14 @@ while IFS=' ' read -r plugin expected _rest; do
   # est déjà installé. Condition sans seuil arbitraire : lastUpdated doit
   # être STRICTEMENT postérieur au dossier de version en cache.
   if [ -z "$installed_mtime" ] || [ "$lu_epoch" -le "$installed_mtime" ]; then
-    add_warning "⚠️  ezacae-base : impossible de se prononcer sur « $plugin » — l'instantané du marketplace n'est pas plus récent que la copie installée, sa référence ne prouve rien de plus.
+    add_warning "impossible de se prononcer sur « $plugin » — l'instantané du marketplace n'est pas plus récent que la copie installée, sa référence ne prouve rien de plus.
     Rafraîchis-le : claude plugin marketplace update $MARKETPLACE"
     [ "$detail" -eq 1 ] && add_detail "    $plugin : attendu $expected — installé $installed_dir ($plugin_cache/$installed_dir) — instantané pas plus récent"
     continue
   fi
 
   if [ "$installed_dir" != "$expected" ]; then
-    add_warning "⚠️  ezacae-base : dérive de version « $plugin » — attendue $expected (instantané du marketplace), installée $installed_dir."
+    add_warning "dérive de version « $plugin » — attendue $expected (instantané du marketplace), installée $installed_dir."
   fi
   [ "$detail" -eq 1 ] && add_detail "    $plugin : attendu $expected — installé $installed_dir ($plugin_cache/$installed_dir)"
 done < "$REF_LOCK"
