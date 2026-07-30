@@ -216,11 +216,19 @@ JSON
   printf 'ezacae-doc 0.1.0\n' > "$snap/versions.lock"
   printf '{ "name": "ezacae-doc", "version": "0.1.0" }\n' > "$snap/plugins/ezacae-doc/.claude-plugin/plugin.json"
 
-  # Vieillir l'instantané, SANS toucher la copie installée (laissée à sa
-  # date de création, donc plus récente qu'un instantané jamais rafraîchi
-  # depuis l'installation — exactement l'inversion que la règle 4 doit
-  # détecter : la référence n'est PAS postérieure à l'installé).
+  # Les deux dates sont figées explicitement, indépendamment de l'horloge
+  # de la machine qui exécute le test : sans ce second gel, le dossier de
+  # version en cache porterait sa date de création (mkdir → "maintenant"),
+  # et la relation testée dépendrait alors de l'heure courante du runner —
+  # vraie aujourd'hui, mais qui s'inverserait sur une machine dont la date
+  # réelle précède le 20/01/2026. La copie installée est figée à une date
+  # postérieure à l'instantané (24h d'écart : `touch -t` interprète l'heure
+  # donnée dans le fuseau local du runner, `lastUpdated` est en UTC — un
+  # écart d'un jour entier absorbe n'importe quel décalage de fuseau réel),
+  # exactement l'inversion que la règle 4 doit détecter : la référence
+  # n'est PAS postérieure à l'installé.
   touch -t 202601200736 "$snap/versions.lock" "$snap" 2>/dev/null
+  touch -t 202601211200 "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0" 2>/dev/null
 
   local out code
   out=$(run_check "$home"); code=$?
