@@ -79,4 +79,13 @@ jq -e . >/dev/null 2>&1 <<< "$KM_JSON" || incapacite "$KM n'est pas un JSON vali
 entry="$(jq -e --arg mk "$MARKETPLACE" '.[$mk]' <<< "$KM_JSON" 2>/dev/null)"
 [ -n "$entry" ] && [ "$entry" != "null" ] || incapacite "marketplace « $MARKETPLACE » absente de $KM"
 
+source_type="$(jq -r '.source.source // empty' <<< "$entry" 2>/dev/null)"
+
+# Règle 2 : source "directory" = lecture directe du dépôt, jamais périmée.
+# Silence, pas un cas d'incapacité — c'est le comportement correct, pas une
+# panne du contrôle.
+if [ "$source_type" = "directory" ]; then
+  exit 0
+fi
+
 exit 0

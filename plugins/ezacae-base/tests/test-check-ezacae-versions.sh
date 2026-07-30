@@ -105,6 +105,38 @@ t1_3() {
 
 t1_3
 
+# =====================================================================
+# Tâche 1.4 : poste en lecture directe du dépôt → silence
+# =====================================================================
+t1_4() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  mkdir -p "$home"
+
+  cat > "$home/known_marketplaces.json" <<JSON
+{
+  "$MARKETPLACE": {
+    "source": { "source": "directory", "path": "/some/local/checkout" },
+    "installLocation": "/some/local/checkout",
+    "lastUpdated": "2020-01-01T00:00:00.000Z"
+  }
+}
+JSON
+
+  # Vieille version dans le cache : même sur ce poste, ne doit rien déclencher.
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0/commands"
+  touch -t 202001010000 "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0" 2>/dev/null
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  eq "1.4 source directory → sortie vide" "" "$out"
+  eq "1.4 source directory → exit 0" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t1_4
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
