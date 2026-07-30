@@ -356,6 +356,31 @@ t3_3() {
 
 t3_3
 
+# =====================================================================
+# Tâche 3.4 : version installée non sémantique — message distinct, jamais
+# de comparaison chiffrée ni de « en retard ».
+# =====================================================================
+t3_4_case() {
+  local label="$1" dirname="$2"
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/$dirname/commands"
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  contains "3.4 $label → nomme le plugin" "ezacae-doc" "$out"
+  nonempty "3.4 $label → sortie non vide (version indéterminée signalée)" "$out"
+  refutes  "3.4 $label → pas de comparaison chiffrée (0.3.2)" "0.3.2" "$out"
+  refutes  "3.4 $label → jamais « en retard »" "en retard" "$out"
+  eq       "3.4 $label → exit 0" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t3_4_case "unknown" "unknown"
+t3_4_case "identifiant de commit" "655b7d9c5431"
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1

@@ -139,6 +139,22 @@ warnings=""
 add_warning() { warnings="${warnings}$1
 "; }
 
+# Version sémantique simple X.Y.Z. Les formes non sémantiques constatées
+# (`unknown`, identifiant de commit type `655b7d9c5431`) ne se comparent
+# pas numériquement : un avertissement permanent qu'aucune mise à jour ne
+# ferait taire serait pire que pas d'avertissement.
+is_semver() {
+  case "$1" in
+    [0-9]*.[0-9]*.[0-9]*)
+      case "$1" in
+        *[!0-9.]*) return 1 ;;
+        *) return 0 ;;
+      esac
+      ;;
+    *) return 1 ;;
+  esac
+}
+
 while IFS=' ' read -r plugin expected _rest; do
   [ -z "$plugin" ] && continue
   case "$plugin" in
@@ -148,13 +164,34 @@ while IFS=' ' read -r plugin expected _rest; do
   plugin_cache="$PLUGINS_HOME/cache/$MARKETPLACE/$plugin"
   installed_dir=""
   if [ -d "$plugin_cache" ]; then
-    installed_dir="$(find "$plugin_cache" -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
-      | sed 's#.*/##' | sort -V | tail -1)"
+    all_dirs="$(find "$plugin_cache" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's#.*/##')"
+    semver_dirs=""
+    while IFS= read -r d; do
+      [ -z "$d" ] && continue
+      if is_semver "$d"; then
+        semver_dirs="${semver_dirs}${d}
+"
+      fi
+    done <<< "$all_dirs"
+    if [ -n "$semver_dirs" ]; then
+      # Plusieurs versions sémantiques en cache (ex. superpowers 6.1.1 et
+      # 6.2.0 côte à côte) : la plus haute (sort -V) est retenue.
+      installed_dir="$(printf '%s' "$semver_dirs" | sort -V | tail -1)"
+    else
+      # Aucun dossier sémantique : version indéterminée, on en retient un
+      # (peu importe lequel, aucune comparaison chiffrée n'en sera faite).
+      installed_dir="$(printf '%s' "$all_dirs" | sort | tail -1)"
+    fi
   fi
 
   if [ -z "$installed_dir" ]; then
     add_warning "⚠️  ezacae-base : plugin « $plugin » attendu (versions.lock) mais absent du poste.
     Installe-le : claude plugin install $plugin@$MARKETPLACE"
+    continue
+  fi
+
+  if ! is_semver "$installed_dir"; then
+    add_warning "⚠️  ezacae-base : version installée de « $plugin » indéterminée ($installed_dir) — impossible de la comparer à la référence attendue."
     continue
   fi
 
