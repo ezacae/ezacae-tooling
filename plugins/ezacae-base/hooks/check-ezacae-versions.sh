@@ -64,4 +64,19 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
+incapacite() {
+  echo "⚠️  ezacae-base : $1 — le contrôle de dérive de version des plugins ezacae est inopérant."
+  exit 0
+}
+
+KM="$PLUGINS_HOME/known_marketplaces.json"
+
+[ -s "$KM" ] || incapacite "$KM introuvable ou vide"
+
+KM_JSON="$(cat "$KM" 2>/dev/null)"
+jq -e . >/dev/null 2>&1 <<< "$KM_JSON" || incapacite "$KM n'est pas un JSON valide"
+
+entry="$(jq -e --arg mk "$MARKETPLACE" '.[$mk]' <<< "$KM_JSON" 2>/dev/null)"
+[ -n "$entry" ] && [ "$entry" != "null" ] || incapacite "marketplace « $MARKETPLACE » absente de $KM"
+
 exit 0

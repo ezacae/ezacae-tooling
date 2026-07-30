@@ -63,6 +63,48 @@ t1_2() {
 
 t1_2
 
+# =====================================================================
+# Tâche 1.3 : structures illisibles → une ligne, pas le silence
+# =====================================================================
+run_check() {
+  # $1 = EZACAE_PLUGINS_HOME
+  EZACAE_PLUGINS_HOME="$1" bash "$SCRIPT" 2>&1
+}
+
+t1_3() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+
+  # Cas a : known_marketplaces.json absent
+  mkdir -p "$home"
+  local out code
+  out=$(run_check "$home"); code=$?
+  nonempty "1.3a known_marketplaces.json absent → sortie non vide" "$out"
+  eq       "1.3a known_marketplaces.json absent → exit 0" "0" "$code"
+
+  # Cas b : known_marketplaces.json vide
+  : > "$home/known_marketplaces.json"
+  out=$(run_check "$home"); code=$?
+  nonempty "1.3b known_marketplaces.json vide → sortie non vide" "$out"
+  eq       "1.3b known_marketplaces.json vide → exit 0" "0" "$code"
+
+  # Cas c : known_marketplaces.json JSON invalide
+  printf '{ceci-nest-pas-du-json' > "$home/known_marketplaces.json"
+  out=$(run_check "$home"); code=$?
+  nonempty "1.3c JSON invalide → sortie non vide" "$out"
+  eq       "1.3c JSON invalide → exit 0" "0" "$code"
+
+  # Cas d : JSON valide mais sans entrée ezacae-claude-tooling
+  printf '{"une-autre-marketplace": {"source": {"source": "git"}}}' > "$home/known_marketplaces.json"
+  out=$(run_check "$home"); code=$?
+  nonempty "1.3d marketplace absente → sortie non vide" "$out"
+  eq       "1.3d marketplace absente → exit 0" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t1_3
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
