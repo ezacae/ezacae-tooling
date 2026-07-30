@@ -315,6 +315,27 @@ t3_1() {
 
 t3_1
 
+# =====================================================================
+# Tâche 3.2 : en retard → avertit
+# =====================================================================
+t3_2() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0/commands"
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  contains "3.2 en retard → nomme le plugin" "ezacae-doc" "$out"
+  contains "3.2 en retard → version attendue" "0.3.2" "$out"
+  contains "3.2 en retard → version installée" "0.1.0" "$out"
+  eq       "3.2 en retard → exit 0" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t3_2
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
