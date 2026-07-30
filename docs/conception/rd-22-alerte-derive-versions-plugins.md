@@ -64,9 +64,11 @@ Le job `test-plugins-shell` ne se déclenche aujourd'hui que sur `plugins/**/*` 
 
 ### Structure de l'instantané : supposée jusqu'à preuve, donc testée
 
-La lecture de la référence suppose que l'instantané du marketplace contient l'arborescence du dépôt (`versions.lock` à sa racine, `plugins/<nom>/.claude-plugin/plugin.json`). C'est vrai pour nos quatre plugins, qui sont **internes** au marketplace (`source: ./plugins/<nom>` dans `.claude-plugin/marketplace.json`).
+La lecture de la référence suppose que l'instantané du marketplace contient `versions.lock` à sa racine. C'est vrai pour nos quatre plugins, qui sont **internes** au marketplace (`source: ./plugins/<nom>` dans `.claude-plugin/marketplace.json`) : l'instantané reprend donc l'arborescence du dépôt.
 
-Ce n'est pas une propriété générale : vérifié le 30/07, l'instantané de `claude-plugins-official` ne contient **pas** `superpowers` sous `plugins/` — les plugins externes ne sont pas recopiés. Cet instantané n'est d'ailleurs pas un dépôt git (pas de `.git`, mais un `.gcs-sha`) : parler de « clone » serait faux. Le contrôle doit donc traiter l'absence de cette arborescence comme un cas d'incapacité, pas comme une absence de dérive.
+Ce n'est pas une propriété générale : vérifié le 30/07, l'instantané de `claude-plugins-official` ne contient **pas** `superpowers` sous `plugins/` — les plugins externes ne sont pas recopiés. Cet instantané n'est d'ailleurs pas un dépôt git (pas de `.git`, mais un `.gcs-sha`) : parler de « clone » serait faux. Le contrôle doit donc traiter l'absence de `versions.lock` dans l'instantané comme un cas d'incapacité, pas comme une absence de dérive.
+
+En mode session, le contrôle **ne lit pas** `plugins/<nom>/.claude-plugin/plugin.json` dans l'instantané : la version attendue vient de `versions.lock`, ce manifeste ne lui apprendrait rien. Ce fichier n'est lu que par le mode `--check`, et uniquement dans le dépôt. *(Précision ajoutée après revue : une version antérieure de ce document annonçait une vérification du manifeste dans l'instantané, que le code ne fait pas — et n'a pas à faire. C'était le document qui surspécifiait.)*
 
 ## La commande de mise à jour affichée
 
@@ -261,3 +263,63 @@ Reprise du test de revue (`test-reference-figee.sh`), qui échoue aujourd'hui su
 - [ ] Commit
 
 > **Hors plan automatique — vérification humaine avant fusion.** L'enchaînement `claude plugin marketplace update` puis `claude plugin update … --scope managed` doit être exécuté **à la main**, sur un poste d'équipe en source git, et sa sortie réelle collée dans la merge request. Aucun agent ne lance ces commandes : sur un poste en source dossier, elles peuvent supprimer la lecture directe du dépôt dont dépend tout le cycle de développement. Tant que la vérification n'a pas eu lieu, le message du contrôle renvoie à la procédure documentée au lieu d'affirmer une commande exacte.
+
+---
+
+## Addendum — correctifs issus de la revue de code
+
+Ajouté après la revue de la MR 18. Aucun bloquant n'a été trouvé ; ces quatre correctifs sont locaux et sans risque. La cinquième correction, l'alignement de la section « Structure de l'instantané » sur ce que fait réellement le code, est déjà appliquée plus haut dans ce document.
+
+Discipline inchangée : test d'abord, échec vérifié, puis correction. Un commit par tâche.
+
+#### Tâche A.1 : rendre le test de la règle 4 indépendant de l'horloge de la machine
+**Fichiers :** Modifier : `plugins/ezacae-base/tests/test-check-ezacae-versions.sh` (cas 2.2)
+
+Le test fige la date de l'instantané (`touch -t 202601200736`) mais laisse le dossier de version en cache à sa date de création, c'est-à-dire l'heure courante. La condition « la référence n'est pas plus récente que la copie installée » dépend donc de l'horloge du runner : sur une machine dont la date est antérieure au 20/01/2026, la relation s'inverse et le test échoue pour une raison étrangère au code.
+
+- [ ] Figer **aussi** la date du dossier de version en cache, à une date fixe postérieure à celle de l'instantané
+- [ ] Vérifier que le test passe avec une horloge simulée en amont **et** en aval des deux dates figées (`faketime` si disponible, sinon en inversant temporairement les deux dates pour prouver que l'assertion suit bien la relation et non l'heure courante)
+- [ ] Vérifier que la suite complète reste à `FAIL=0`
+- [ ] Commit
+
+#### Tâche A.2 : la garde `jq` appelle la fonction d'incapacité au lieu de recopier son message
+**Fichiers :** Modifier : `plugins/ezacae-base/hooks/check-ezacae-versions.sh`
+
+Le gabarit de message est écrit deux fois à trois lignes d'intervalle. `incapacite()` ne dépend pas de `jq` : la définir avant la garde permet de l'appeler.
+
+- [ ] Écrire le test : `PATH` vidé → le message d'incapacité `jq` est **identique au caractère près** au gabarit produit par les autres cas d'incapacité
+- [ ] Vérifier qu'il échoue
+- [ ] Déplacer la définition de `incapacite()` avant la garde et l'appeler
+- [ ] Vérifier qu'il passe, et que la suite complète reste à `FAIL=0`
+- [ ] Commit
+
+#### Tâche A.3 : centraliser le préfixe d'avertissement
+**Fichiers :** Modifier : `plugins/ezacae-base/hooks/check-ezacae-versions.sh`
+
+`⚠️  ezacae-base : ` est écrit en dur six fois. Le préfixe appartient à la fonction qui construit l'avertissement, pas à chaque appelant.
+
+- [ ] Écrire le test : chaque ligne d'avertissement émise, tous cas confondus, commence par le même préfixe
+- [ ] Vérifier qu'il échoue si un seul appelant l'omet
+- [ ] Déplacer le préfixe dans la fonction d'émission ; les appelants ne passent plus que le message métier
+- [ ] Vérifier que la suite complète reste à `FAIL=0`
+- [ ] Commit
+
+#### Tâche A.4 : ajouter l'assertion « code de sortie non nul »
+**Fichiers :** Modifier : `plugins/ezacae-base/tests/test-check-ezacae-versions.sh`
+
+Le motif est réinventé en ligne trois fois dans le cas 4.1 (b, c, d), alors que le fichier possède déjà quatre helpers d'assertion.
+
+- [ ] Ajouter un cinquième helper aux côtés de `contains` / `refutes` / `eq` / `nonempty`
+- [ ] Remplacer les trois occurrences en ligne
+- [ ] Vérifier que le compte d'assertions est **inchangé** et que la suite reste à `FAIL=0` — un refactoring de test qui fait varier le nombre d'assertions a changé le sens du test
+- [ ] Commit
+
+#### Tâche A.5 : rendre le test 2.3 distinctif
+**Fichiers :** Modifier : `plugins/ezacae-base/tests/test-check-ezacae-versions.sh` (cas 2.3)
+
+Le test de l'arborescence absente n'assert que « sortie non vide », « pas de à jour » et « exit 0 » — exactement ce qu'affirmerait un `versions.lock` simplement manquant. Il passerait donc même si la logique testée différait.
+
+- [ ] Renforcer l'assertion pour que la sortie **nomme la cause** (référence absente de l'instantané du marketplace) et se distingue du cas d'un instantané introuvable
+- [ ] Vérifier qu'il échoue si le message d'incapacité est remplacé par celui d'un autre cas
+- [ ] Vérifier que la suite complète reste à `FAIL=0`
+- [ ] Commit
