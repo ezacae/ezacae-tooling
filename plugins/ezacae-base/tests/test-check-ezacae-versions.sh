@@ -277,6 +277,16 @@ JSON
   nonempty "2.3 arborescence absente → sortie non vide" "$out"
   refutes  "2.3 arborescence absente → ne conclut jamais « à jour »" "à jour" "$out"
   eq       "2.3 arborescence absente → exit 0" "0" "$code"
+  # Assertions renforcées : les trois ci-dessus seraient tout aussi bien
+  # satisfaites par n'importe quel autre cas d'incapacité (jq absent,
+  # known_marketplaces.json introuvable, etc.) — elles ne prouvent pas que
+  # la CAUSE identifiée est la bonne. On verrouille donc que la sortie
+  # nomme précisément versions.lock et l'instantané du marketplace, et se
+  # distingue du cas où c'est known_marketplaces.json lui-même (KM,
+  # tâche 1.3a) qui est introuvable — une cause différente, plus en amont.
+  contains "2.3 arborescence absente → nomme la cause (versions.lock)" "versions.lock" "$out"
+  contains "2.3 arborescence absente → situe la cause dans l'instantané du marketplace" "instantané du marketplace" "$out"
+  refutes  "2.3 arborescence absente → se distingue du cas known_marketplaces.json introuvable" "known_marketplaces.json" "$out"
 
   rm -rf "$tmp"
 }
