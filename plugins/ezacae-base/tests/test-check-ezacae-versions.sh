@@ -273,6 +273,48 @@ JSON
 
 t2_3
 
+# =====================================================================
+# Helper commun aux tâches de phase 3 : poste git à jour, instantané
+# fraîchement rafraîchi (lastUpdated dans le futur du test).
+# =====================================================================
+setup_fresh_git_post() {
+  # $1 = home, $2 = plugin, $3 = expected version (dans versions.lock)
+  local home="$1" plugin="$2" expected="$3"
+  local snap="$home/marketplaces/ezacae-claude-tooling"
+  mkdir -p "$snap/plugins/$plugin/.claude-plugin"
+  mkdir -p "$home"
+  cat > "$home/known_marketplaces.json" <<JSON
+{
+  "$MARKETPLACE": {
+    "source": { "source": "git", "url": "git@example.invalid:ezacae/ezacae-claude-tooling.git" },
+    "installLocation": "$snap",
+    "lastUpdated": "2099-01-01T00:00:00.000Z"
+  }
+}
+JSON
+  printf '%s %s\n' "$plugin" "$expected" > "$snap/versions.lock"
+  printf '{ "name": "%s", "version": "%s" }\n' "$plugin" "$expected" > "$snap/plugins/$plugin/.claude-plugin/plugin.json"
+}
+
+# =====================================================================
+# Tâche 3.1 : à jour → silence
+# =====================================================================
+t3_1() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.3.2/commands"
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  eq "3.1 à jour → sortie vide" "" "$out"
+  eq "3.1 à jour → exit 0" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t3_1
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
