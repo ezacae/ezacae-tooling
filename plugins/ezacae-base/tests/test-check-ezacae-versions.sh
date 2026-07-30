@@ -31,6 +31,8 @@ eq()       { if [ "$2" = "$3" ]; then echo "PASS: $1"; pass=$((pass+1))
   else echo "FAIL: $1 — attendu «$2» — obtenu «$3»"; fail=$((fail+1)); fi; }
 nonempty() { if [ -n "$(printf '%s' "$2" | tr -d '[:space:]')" ]; then echo "PASS: $1"; pass=$((pass+1))
   else echo "FAIL: $1 — sortie vide, le contrôle est resté muet"; fail=$((fail+1)); fi; }
+nonzero()  { if [ "$2" != "0" ]; then echo "PASS: $1"; pass=$((pass+1))
+  else echo "FAIL: $1 — code de sortie attendu non nul — obtenu 0"; fail=$((fail+1)); fi; }
 
 # =====================================================================
 # Tâche 1.1 : squelette, sortie toujours en succès
@@ -476,24 +478,21 @@ t4_1() {
   printf 'ezacae-a 1.0.0\nezacae-b 1.9.0\n' > "$root/versions.lock"
   out=$("$BASH_BIN" "$SCRIPT" --check "$root" 2>&1); code=$?
   contains "4.1b écart → nomme le plugin fautif" "ezacae-b" "$out"
-  [ "$code" != "0" ] && echo "PASS: 4.1b écart → exit non nul" && pass=$((pass+1)) \
-    || { echo "FAIL: 4.1b écart → exit non nul — obtenu 0"; fail=$((fail+1)); }
+  nonzero "4.1b écart → exit non nul" "$code"
 
   # Cas c : plugin du dépôt absent de versions.lock → exit non nul
   root="$tmp/repo-manquant"; make_fake_repo "$root"
   printf 'ezacae-a 1.0.0\n' > "$root/versions.lock"
   out=$("$BASH_BIN" "$SCRIPT" --check "$root" 2>&1); code=$?
   contains "4.1c plugin absent du fichier → nomme-le" "ezacae-b" "$out"
-  [ "$code" != "0" ] && echo "PASS: 4.1c plugin absent du fichier → exit non nul" && pass=$((pass+1)) \
-    || { echo "FAIL: 4.1c plugin absent du fichier → exit non nul — obtenu 0"; fail=$((fail+1)); }
+  nonzero "4.1c plugin absent du fichier → exit non nul" "$code"
 
   # Cas d : ligne du fichier sans plugin correspondant → exit non nul
   root="$tmp/repo-orpheline"; make_fake_repo "$root"
   printf 'ezacae-a 1.0.0\nezacae-b 2.0.0\nezacae-fantome 9.9.9\n' > "$root/versions.lock"
   out=$("$BASH_BIN" "$SCRIPT" --check "$root" 2>&1); code=$?
   contains "4.1d ligne orpheline → la nomme" "ezacae-fantome" "$out"
-  [ "$code" != "0" ] && echo "PASS: 4.1d ligne orpheline → exit non nul" && pass=$((pass+1)) \
-    || { echo "FAIL: 4.1d ligne orpheline → exit non nul — obtenu 0"; fail=$((fail+1)); }
+  nonzero "4.1d ligne orpheline → exit non nul" "$code"
 
   rm -rf "$tmp"
 }
