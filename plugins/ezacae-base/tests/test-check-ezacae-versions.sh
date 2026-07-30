@@ -20,6 +20,7 @@ set -u
 DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPT="${EZACAE_CHECK_SCRIPT:-$DIR/../hooks/check-ezacae-versions.sh}"
 MARKETPLACE="ezacae-claude-tooling"
+BASH_BIN="$(command -v bash)"
 
 pass=0; fail=0
 contains() { if printf '%s' "$3" | grep -qF -- "$2"; then echo "PASS: $1"; pass=$((pass+1))
@@ -43,6 +44,25 @@ t1_1() {
 }
 
 t1_1
+
+# =====================================================================
+# Tâche 1.2 : jq absent → une ligne, pas le silence
+# =====================================================================
+t1_2() {
+  local tmp; tmp="$(mktemp -d)"
+  # PATH réduit à un dossier sans jq (ni aucun binaire système, y compris
+  # bash lui-même — on le relance donc via son chemin absolu, pas via $PATH).
+  local emptybin="$tmp/emptybin"; mkdir -p "$emptybin"
+  local out code
+  out=$(EZACAE_PLUGINS_HOME="$tmp/plugins" PATH="$emptybin" "$BASH_BIN" "$SCRIPT" 2>&1); code=$?
+  nonempty "1.2 jq absent → sortie non vide" "$out"
+  contains "1.2 jq absent → mentionne jq" "jq" "$out"
+  eq       "1.2 jq absent → exit 0" "0" "$code"
+  rm -rf "$tmp"
+}
+
+t1_2
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1

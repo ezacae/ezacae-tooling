@@ -35,7 +35,10 @@
 set -u
 
 MARKETPLACE="ezacae-claude-tooling"
-HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Dossier du script en bash pur (expansion de paramètre) : pas d'appel à
+# `dirname`, qui dépend de $PATH — la garde jq ci-dessous doit pouvoir
+# s'exécuter même avec un $PATH réduit, avant tout appel externe.
+HOOK_DIR="$(cd "${0%/*}" 2>/dev/null && pwd)"
 PLUGINS_HOME="${EZACAE_PLUGINS_HOME:-$HOME/.claude/plugins}"
 
 detail=0
@@ -53,5 +56,12 @@ if [ "$check" -eq 1 ]; then
   exit 0
 fi
 
-# --- Mode session : rien à faire encore, squelette (tâches suivantes) -----
+# --- Mode session -----------------------------------------------------
+# `command -v` est un builtin bash : fonctionne même si $PATH ne contient
+# plus aucun binaire externe.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "⚠️  ezacae-base : jq est introuvable — le contrôle de dérive de version des plugins ezacae est inopérant."
+  exit 0
+fi
+
 exit 0
