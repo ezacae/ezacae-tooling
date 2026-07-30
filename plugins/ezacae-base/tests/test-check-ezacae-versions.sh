@@ -411,6 +411,34 @@ t3_5() {
 
 t3_5
 
+# =====================================================================
+# Tâche 3.6 : option --detail — affiche les sources, chemins et dates,
+# y compris quand tout va bien (silence en mode normal).
+# =====================================================================
+t3_6() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  local snap="$home/marketplaces/ezacae-claude-tooling"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.3.2/commands"
+
+  local out_silent code_silent out_detail code_detail
+  out_silent=$(run_check "$home"); code_silent=$?
+  eq "3.6 sans --detail, tout va bien → silence" "" "$out_silent"
+
+  out_detail=$(EZACAE_PLUGINS_HOME="$home" bash "$SCRIPT" --detail 2>&1); code_detail=$?
+  nonempty "3.6 --detail → sortie non vide même à jour" "$out_detail"
+  contains "3.6 --detail → nomme le plugin" "ezacae-doc" "$out_detail"
+  contains "3.6 --detail → chemin de l'instantané" "$snap" "$out_detail"
+  contains "3.6 --detail → version attendue" "0.3.2" "$out_detail"
+  contains "3.6 --detail → date lastUpdated" "2099-01-01" "$out_detail"
+  eq       "3.6 --detail → exit 0" "0" "$code_detail"
+
+  rm -rf "$tmp"
+}
+
+t3_6
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1

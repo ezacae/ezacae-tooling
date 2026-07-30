@@ -139,6 +139,14 @@ warnings=""
 add_warning() { warnings="${warnings}$1
 "; }
 
+details=""
+add_detail() { details="${details}$1
+"; }
+[ "$detail" -eq 1 ] && add_detail "ℹ️  ezacae-base — détail des sources lues :
+    marketplace : $MARKETPLACE (source : $source_type)
+    instantané  : $install_location
+    lastUpdated : $last_updated"
+
 # Version sémantique simple X.Y.Z. Les formes non sémantiques constatées
 # (`unknown`, identifiant de commit type `655b7d9c5431`) ne se comparent
 # pas numériquement : un avertissement permanent qu'aucune mise à jour ne
@@ -187,11 +195,13 @@ while IFS=' ' read -r plugin expected _rest; do
   if [ -z "$installed_dir" ]; then
     add_warning "⚠️  ezacae-base : plugin « $plugin » attendu (versions.lock) mais absent du poste.
     Installe-le : claude plugin install $plugin@$MARKETPLACE"
+    [ "$detail" -eq 1 ] && add_detail "    $plugin : attendu $expected — absent du cache ($plugin_cache)"
     continue
   fi
 
   if ! is_semver "$installed_dir"; then
     add_warning "⚠️  ezacae-base : version installée de « $plugin » indéterminée ($installed_dir) — impossible de la comparer à la référence attendue."
+    [ "$detail" -eq 1 ] && add_detail "    $plugin : attendu $expected — installé $installed_dir (non sémantique, $plugin_cache/$installed_dir)"
     continue
   fi
 
@@ -203,14 +213,17 @@ while IFS=' ' read -r plugin expected _rest; do
   if [ -z "$installed_mtime" ] || [ "$lu_epoch" -le "$installed_mtime" ]; then
     add_warning "⚠️  ezacae-base : impossible de se prononcer sur « $plugin » — l'instantané du marketplace n'est pas plus récent que la copie installée, sa référence ne prouve rien de plus.
     Rafraîchis-le : claude plugin marketplace update $MARKETPLACE"
+    [ "$detail" -eq 1 ] && add_detail "    $plugin : attendu $expected — installé $installed_dir ($plugin_cache/$installed_dir) — instantané pas plus récent"
     continue
   fi
 
   if [ "$installed_dir" != "$expected" ]; then
     add_warning "⚠️  ezacae-base : dérive de version « $plugin » — attendue $expected (instantané du marketplace), installée $installed_dir."
   fi
+  [ "$detail" -eq 1 ] && add_detail "    $plugin : attendu $expected — installé $installed_dir ($plugin_cache/$installed_dir)"
 done < "$REF_LOCK"
 
 [ -n "$warnings" ] && printf '%s' "$warnings"
+[ "$detail" -eq 1 ] && printf '%s' "$details"
 
 exit 0
