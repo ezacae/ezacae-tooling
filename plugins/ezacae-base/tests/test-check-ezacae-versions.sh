@@ -381,6 +381,36 @@ t3_4_case() {
 t3_4_case "unknown" "unknown"
 t3_4_case "identifiant de commit" "655b7d9c5431"
 
+# =====================================================================
+# Tâche 3.5 : plusieurs versions en cache — la plus haute sémantique
+# retenue ; un dossier bien formé prime sur un `unknown` côte à côte.
+# =====================================================================
+t3_5() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0/commands"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.3.2/commands"
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  eq "3.5a deux versions sémantiques → la plus haute retenue (silence, à jour)" "" "$out"
+  eq "3.5a exit 0" "0" "$code"
+  rm -rf "$tmp"
+
+  tmp="$(mktemp -d)"; home="$tmp/plugins"
+  setup_fresh_git_post "$home" "ezacae-doc" "0.3.2"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/unknown/commands"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.3.2/commands"
+
+  out=$(run_check "$home"); code=$?
+  eq "3.5b un dossier bien formé + un unknown → le bien formé retenu (silence, à jour)" "" "$out"
+  eq "3.5b exit 0" "0" "$code"
+  rm -rf "$tmp"
+}
+
+t3_5
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
