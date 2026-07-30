@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# check-ezacae-versions.sh — garde SessionStart (RD-22, ezacae-base).
+#
+# Avertit un développeur ezacae, au démarrage de session, quand ses plugins
+# ezacae ne sont pas à la version publiée. Non bloquant : émet un avertissement
+# visible, sort TOUJOURS 0. Même forme que check-superpowers.sh (RD-8,
+# ezacae-dev) : détection par le disque, jamais par le CLI qu'un hook
+# SessionStart est en train de démarrer.
+#
+# Quatre règles imposées par ce qui a été vérifié le 30/07 (cf.
+# docs/conception/rd-22-alerte-derive-versions-plugins.md) :
+#   1. Jamais `claude plugin list` ni installed_plugins.json comme source de
+#      version : le premier annonce ezacae-dev 0.1.0 sur un poste qui exécute
+#      la 0.4.0.
+#   2. Silence sur un poste qui lit le dépôt en direct (marketplace en source
+#      "directory") : rien n'y est jamais périmé.
+#   3. La version attendue se lit dans l'instantané local du marketplace
+#      (versions.lock à sa racine), jamais dans la copie installée : cette
+#      dernière est figée au même commit que le reste.
+#   4. Cet instantané n'est fiable que s'il est plus récent que la copie
+#      installée (comparaison lastUpdated vs mtime du dossier de version en
+#      cache) — sinon le contrôle ne peut rien affirmer et le dit.
+#
+# Modes :
+#   (aucun)    contrôle de session, non bloquant, sort toujours 0
+#   --detail   ajoute le détail des sources lues, même quand tout va bien
+#   --check    mode intégration continue : compare versions.lock (racine du
+#              dépôt) aux plugin.json du dépôt ; échoue (exit != 0) sur écart
+#
+# Testabilité (cf. tests/test-check-ezacae-versions.sh) :
+#   EZACAE_PLUGINS_HOME  racine des fichiers plugins d'un poste
+#                        (défaut : ~/.claude/plugins). Seule variable
+#                        d'injection : pas de variable pointant directement
+#                        la référence, ce serait court-circuiter la règle 3.
+set -u
+
+MARKETPLACE="ezacae-claude-tooling"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGINS_HOME="${EZACAE_PLUGINS_HOME:-$HOME/.claude/plugins}"
+
+detail=0
+check=0
+repo_root_arg=""
+for arg in "$@"; do
+  case "$arg" in
+    --detail) detail=1 ;;
+    --check) check=1 ;;
+    *) repo_root_arg="$arg" ;;
+  esac
+done
+
+if [ "$check" -eq 1 ]; then
+  exit 0
+fi
+
+# --- Mode session : rien à faire encore, squelette (tâches suivantes) -----
+exit 0
