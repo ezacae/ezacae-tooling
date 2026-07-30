@@ -53,7 +53,59 @@ for arg in "$@"; do
 done
 
 if [ "$check" -eq 1 ]; then
-  exit 0
+  # --- Mode intégration continue -------------------------------------
+  # Racine du dépôt : déduite de l'emplacement du script (hooks/ → trois
+  # niveaux au-dessus : hooks → ezacae-base → plugins → racine), ou
+  # fournie en argument pour les tests. Ce n'est PAS EZACAE_PLUGINS_HOME
+  # (le dossier plugins d'un poste) : deux entrées distinctes.
+  if [ -n "$repo_root_arg" ]; then
+    REPO_ROOT="$repo_root_arg"
+  else
+    REPO_ROOT="$(cd "$HOOK_DIR/../../.." 2>/dev/null && pwd)"
+  fi
+
+  CHECK_LOCK="$REPO_ROOT/versions.lock"
+  if [ ! -f "$CHECK_LOCK" ]; then
+    echo "✗ versions.lock introuvable : $CHECK_LOCK"
+    exit 1
+  fi
+
+  check_status=0
+
+  # Chaque plugin présent sous plugins/ doit être déclaré dans
+  # versions.lock, avec la même version que son plugin.json.
+  for plugin_dir in "$REPO_ROOT"/plugins/*/; do
+    [ -d "$plugin_dir" ] || continue
+    plugin_name="$(basename "$plugin_dir")"
+    plugin_manifest="${plugin_dir}.claude-plugin/plugin.json"
+    [ -f "$plugin_manifest" ] || continue
+    real_version="$(jq -r '.version // empty' "$plugin_manifest" 2>/dev/null)"
+    lock_line="$(grep -E "^${plugin_name} " "$CHECK_LOCK" | head -1)"
+    if [ -z "$lock_line" ]; then
+      echo "✗ $plugin_name : présent sous plugins/ mais absent de versions.lock"
+      check_status=1
+      continue
+    fi
+    lock_version="$(printf '%s' "$lock_line" | awk '{print $2}')"
+    if [ "$real_version" != "$lock_version" ]; then
+      echo "✗ $plugin_name : versions.lock annonce $lock_version, plugin.json déclare $real_version"
+      check_status=1
+    fi
+  done
+
+  # Chaque ligne de versions.lock doit correspondre à un plugin réel.
+  while IFS=' ' read -r lock_plugin _lock_ver _lock_rest; do
+    [ -z "$lock_plugin" ] && continue
+    case "$lock_plugin" in
+      \#*) continue ;;
+    esac
+    if [ ! -f "$REPO_ROOT/plugins/$lock_plugin/.claude-plugin/plugin.json" ]; then
+      echo "✗ $lock_plugin : présent dans versions.lock mais aucun plugin correspondant sous plugins/"
+      check_status=1
+    fi
+  done < "$CHECK_LOCK"
+
+  exit $check_status
 fi
 
 # --- Mode session -----------------------------------------------------

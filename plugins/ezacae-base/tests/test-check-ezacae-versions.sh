@@ -439,6 +439,59 @@ t3_6() {
 
 t3_6
 
+# =====================================================================
+# Tâche 4.1 : mode --check (intégration continue). Compare versions.lock
+# (racine du dépôt) aux plugin.json du dépôt. Racine déduite de
+# l'emplacement du script, ou fournie en argument (ici, toujours fournie :
+# arborescence fabriquée, hors-ligne).
+# =====================================================================
+make_fake_repo() {
+  # $1 = racine à créer ; définit ezacae-a 1.0.0 et ezacae-b 2.0.0
+  local root="$1"
+  mkdir -p "$root/plugins/ezacae-a/.claude-plugin" "$root/plugins/ezacae-b/.claude-plugin"
+  printf '{ "name": "ezacae-a", "version": "1.0.0" }\n' > "$root/plugins/ezacae-a/.claude-plugin/plugin.json"
+  printf '{ "name": "ezacae-b", "version": "2.0.0" }\n' > "$root/plugins/ezacae-b/.claude-plugin/plugin.json"
+}
+
+t4_1() {
+  local tmp; tmp="$(mktemp -d)"
+
+  # Cas a : versions.lock conforme → exit 0
+  local root="$tmp/repo-ok"; make_fake_repo "$root"
+  printf 'ezacae-a 1.0.0\nezacae-b 2.0.0\n' > "$root/versions.lock"
+  local out code
+  out=$("$BASH_BIN" "$SCRIPT" --check "$root" 2>&1); code=$?
+  eq "4.1a conforme → exit 0" "0" "$code"
+
+  # Cas b : écart de version → exit non nul, nomme le plugin fautif
+  root="$tmp/repo-ecart"; make_fake_repo "$root"
+  printf 'ezacae-a 1.0.0\nezacae-b 1.9.0\n' > "$root/versions.lock"
+  out=$("$BASH_BIN" "$SCRIPT" --check "$root" 2>&1); code=$?
+  contains "4.1b écart → nomme le plugin fautif" "ezacae-b" "$out"
+  [ "$code" != "0" ] && echo "PASS: 4.1b écart → exit non nul" && pass=$((pass+1)) \
+    || { echo "FAIL: 4.1b écart → exit non nul — obtenu 0"; fail=$((fail+1)); }
+
+  # Cas c : plugin du dépôt absent de versions.lock → exit non nul
+  root="$tmp/repo-manquant"; make_fake_repo "$root"
+  printf 'ezacae-a 1.0.0\n' > "$root/versions.lock"
+  out=$("$BASH_BIN" "$SCRIPT" --check "$root" 2>&1); code=$?
+  contains "4.1c plugin absent du fichier → nomme-le" "ezacae-b" "$out"
+  [ "$code" != "0" ] && echo "PASS: 4.1c plugin absent du fichier → exit non nul" && pass=$((pass+1)) \
+    || { echo "FAIL: 4.1c plugin absent du fichier → exit non nul — obtenu 0"; fail=$((fail+1)); }
+
+  # Cas d : ligne du fichier sans plugin correspondant → exit non nul
+  root="$tmp/repo-orpheline"; make_fake_repo "$root"
+  printf 'ezacae-a 1.0.0\nezacae-b 2.0.0\nezacae-fantome 9.9.9\n' > "$root/versions.lock"
+  out=$("$BASH_BIN" "$SCRIPT" --check "$root" 2>&1); code=$?
+  contains "4.1d ligne orpheline → la nomme" "ezacae-fantome" "$out"
+  [ "$code" != "0" ] && echo "PASS: 4.1d ligne orpheline → exit non nul" && pass=$((pass+1)) \
+    || { echo "FAIL: 4.1d ligne orpheline → exit non nul — obtenu 0"; fail=$((fail+1)); }
+
+  rm -rf "$tmp"
+}
+
+t4_1
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
