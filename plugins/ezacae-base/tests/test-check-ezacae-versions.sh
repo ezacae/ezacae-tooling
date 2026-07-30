@@ -184,6 +184,57 @@ JSON
 
 t2_1
 
+# =====================================================================
+# Tâche 2.2 : référence pas plus récente que la copie installée →
+# le contrôle avertit de son incapacité à se prononcer (règle 4).
+#
+# Reprise du test de revue critique (test-reference-figee.sh) : un poste
+# dont l'instantané de marketplace n'a jamais été rafraîchi depuis
+# l'installation a un lastUpdated aussi vieux que la copie installée.
+# Comparer les deux versions conclurait à tort « à jour ».
+# =====================================================================
+t2_2() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  local snap="$home/marketplaces/ezacae-claude-tooling"
+  mkdir -p "$snap/plugins/ezacae-doc/.claude-plugin"
+  mkdir -p "$home/cache/$MARKETPLACE/ezacae-doc/0.1.0"
+
+  cat > "$home/known_marketplaces.json" <<JSON
+{
+  "$MARKETPLACE": {
+    "source": { "source": "git", "url": "git@example.invalid:ezacae/ezacae-claude-tooling.git" },
+    "installLocation": "$snap",
+    "lastUpdated": "2026-01-20T07:36:54.571Z"
+  }
+}
+JSON
+
+  # La référence embarquée dans l'instantané est figée à la même version que
+  # la copie installée. La version réellement publiée depuis est 0.3.2 —
+  # invisible d'ici, et c'est tout le problème.
+  printf 'ezacae-doc 0.1.0\n' > "$snap/versions.lock"
+  printf '{ "name": "ezacae-doc", "version": "0.1.0" }\n' > "$snap/plugins/ezacae-doc/.claude-plugin/plugin.json"
+
+  # Vieillir l'instantané, SANS toucher la copie installée (laissée à sa
+  # date de création, donc plus récente qu'un instantané jamais rafraîchi
+  # depuis l'installation — exactement l'inversion que la règle 4 doit
+  # détecter : la référence n'est PAS postérieure à l'installé).
+  touch -t 202601200736 "$snap/versions.lock" "$snap" 2>/dev/null
+
+  local out code
+  out=$(run_check "$home"); code=$?
+  contains "2.2 référence figée → nomme le plugin concerné" "ezacae-doc" "$out"
+  contains "2.2 référence figée → donne le geste qui lève le doute" "claude plugin marketplace update" "$out"
+  refutes  "2.2 référence figée → ne conclut jamais « à jour »" "à jour" "$out"
+  nonempty "2.2 référence figée → ne reste pas muet" "$out"
+  eq       "2.2 référence figée → reste non bloquant" "0" "$code"
+
+  rm -rf "$tmp"
+}
+
+t2_2
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1

@@ -101,6 +101,40 @@ REF_LOCK="$install_location/versions.lock"
 
 [ -s "$REF_LOCK" ] || incapacite "$REF_LOCK introuvable dans l'instantané du marketplace"
 
+# --- Portabilité : le poste de dev est BSD (macOS), la CI tourne sur
+# alpine (busybox). `stat -f`/`date -j -f` (BSD) et `stat -c`/`date -d`
+# (GNU/busybox) diffèrent ; on tente les deux formes et on ne garde que le
+# premier résultat purement numérique (une erreur d'une des deux formes peut
+# écrire du texte sur stdout, pas seulement stderr — busybox `stat -f` le
+# fait — donc on filtre, on ne se fie pas qu'au code de sortie).
+numeric_only() {
+  case "$1" in
+    ''|*[!0-9]*) printf '' ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
+epoch_of_mtime() {
+  local f="$1" out
+  out="$(numeric_only "$(stat -f %m "$f" 2>/dev/null)")"
+  [ -n "$out" ] || out="$(numeric_only "$(stat -c %Y "$f" 2>/dev/null)")"
+  printf '%s' "$out"
+}
+
+epoch_of_iso() {
+  local iso="$1" clean out
+  clean="${iso%Z}"
+  clean="${clean%%.*}"
+  out="$(numeric_only "$(date -j -u -f '%Y-%m-%dT%H:%M:%S' "$clean" +%s 2>/dev/null)")"
+  [ -n "$out" ] || out="$(numeric_only "$(date -u -d "$iso" +%s 2>/dev/null)")"
+  [ -n "$out" ] || out="$(numeric_only "$(date -u -D '%Y-%m-%dT%H:%M:%S' -d "$clean" +%s 2>/dev/null)")"
+  [ -n "$out" ] || out="$(numeric_only "$(date -u -d "${clean/T/ }" +%s 2>/dev/null)")"
+  printf '%s' "$out"
+}
+
+lu_epoch="$(epoch_of_iso "$last_updated")"
+[ -n "$lu_epoch" ] || incapacite "date « $last_updated » illisible (lastUpdated) dans $KM"
+
 warnings=""
 add_warning() { warnings="${warnings}$1
 "; }
@@ -119,6 +153,17 @@ while IFS=' ' read -r plugin expected _rest; do
   fi
 
   if [ -z "$installed_dir" ]; then
+    continue
+  fi
+
+  installed_mtime="$(epoch_of_mtime "$plugin_cache/$installed_dir")"
+
+  # Règle 4 : l'instantané ne peut rien affirmer de plus récent que ce qui
+  # est déjà installé. Condition sans seuil arbitraire : lastUpdated doit
+  # être STRICTEMENT postérieur au dossier de version en cache.
+  if [ -z "$installed_mtime" ] || [ "$lu_epoch" -le "$installed_mtime" ]; then
+    add_warning "⚠️  ezacae-base : impossible de se prononcer sur « $plugin » — l'instantané du marketplace n'est pas plus récent que la copie installée, sa référence ne prouve rien de plus.
+    Rafraîchis-le : claude plugin marketplace update $MARKETPLACE"
     continue
   fi
 
