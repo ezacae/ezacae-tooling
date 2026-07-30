@@ -492,6 +492,49 @@ t4_1() {
 
 t4_1
 
+# =====================================================================
+# Tâche 5.2 (découvert à l'exécution réelle) : --detail doit montrer les
+# plugins même sur un poste en source directory — pas seulement rester
+# silencieux comme en mode normal (tâche 1.4). C'est le cas du poste de
+# maintenance : sans ce test, --detail y serait muet, contredisant sa
+# propre raison d'être (« comprendre un avertissement surprenant sans
+# refaire l'enquête, et mesurer un poste dont on doute »).
+# =====================================================================
+t5_2_detail_directory() {
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"
+  local repo="$tmp/repo-checkout"
+  mkdir -p "$home" "$repo"
+
+  cat > "$home/known_marketplaces.json" <<JSON
+{
+  "$MARKETPLACE": {
+    "source": { "source": "directory", "path": "$repo" },
+    "installLocation": "$repo",
+    "lastUpdated": "2020-01-01T00:00:00.000Z"
+  }
+}
+JSON
+  printf 'ezacae-base 0.2.0\nezacae-jira 0.2.0\nezacae-doc 0.3.2\nezacae-dev 0.4.0\n' > "$repo/versions.lock"
+
+  local out_silent code_silent out_detail code_detail
+  out_silent=$(run_check "$home"); code_silent=$?
+  eq "5.2 directory sans --detail → silence (déjà couvert, verrouillé ici aussi)" "" "$out_silent"
+  eq "5.2 directory sans --detail → exit 0" "0" "$code_silent"
+
+  out_detail=$(EZACAE_PLUGINS_HOME="$home" bash "$SCRIPT" --detail 2>&1); code_detail=$?
+  nonempty "5.2 directory --detail → sortie non vide" "$out_detail"
+  contains "5.2 directory --detail → mentionne ezacae-base" "ezacae-base" "$out_detail"
+  contains "5.2 directory --detail → mentionne ezacae-jira" "ezacae-jira" "$out_detail"
+  contains "5.2 directory --detail → mentionne ezacae-doc" "ezacae-doc" "$out_detail"
+  contains "5.2 directory --detail → mentionne ezacae-dev" "ezacae-dev" "$out_detail"
+  eq       "5.2 directory --detail → exit 0" "0" "$code_detail"
+
+  rm -rf "$tmp"
+}
+
+t5_2_detail_directory
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1

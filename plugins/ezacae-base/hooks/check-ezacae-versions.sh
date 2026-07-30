@@ -132,16 +132,28 @@ entry="$(jq -e --arg mk "$MARKETPLACE" '.[$mk]' <<< "$KM_JSON" 2>/dev/null)"
 [ -n "$entry" ] && [ "$entry" != "null" ] || incapacite "marketplace « $MARKETPLACE » absente de $KM"
 
 source_type="$(jq -r '.source.source // empty' <<< "$entry" 2>/dev/null)"
-
-# Règle 2 : source "directory" = lecture directe du dépôt, jamais périmée.
-# Silence, pas un cas d'incapacité — c'est le comportement correct, pas une
-# panne du contrôle.
-if [ "$source_type" = "directory" ]; then
-  exit 0
-fi
-
 install_location="$(jq -r '.installLocation // empty' <<< "$entry" 2>/dev/null)"
 last_updated="$(jq -r '.lastUpdated // empty' <<< "$entry" 2>/dev/null)"
+
+# Règle 2 : source "directory" = lecture directe du dépôt, jamais périmée.
+# Silence en mode normal — pas un cas d'incapacité, c'est le comportement
+# correct. --detail reste utile ici : il montre ce qu'il y a à voir (aucune
+# dérive possible n'empêche de comprendre un poste dont on doute).
+if [ "$source_type" = "directory" ]; then
+  if [ "$detail" -eq 1 ]; then
+    echo "ℹ️  ezacae-base — détail des sources lues :
+    marketplace : $MARKETPLACE (source : directory — lecture directe du dépôt, aucune dérive possible)
+    dépôt       : $install_location"
+    if [ -n "$install_location" ] && [ -s "$install_location/versions.lock" ]; then
+      while IFS=' ' read -r d_plugin d_version _rest; do
+        [ -z "$d_plugin" ] && continue
+        case "$d_plugin" in \#*) continue ;; esac
+        echo "    $d_plugin : $d_version (versions.lock du dépôt)"
+      done < "$install_location/versions.lock"
+    fi
+  fi
+  exit 0
+fi
 
 [ -n "$install_location" ] && [ -n "$last_updated" ] \
   || incapacite "entrée « $MARKETPLACE » incomplète (installLocation/lastUpdated) dans $KM"
