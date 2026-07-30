@@ -109,17 +109,17 @@ if [ "$check" -eq 1 ]; then
 fi
 
 # --- Mode session -----------------------------------------------------
-# `command -v` est un builtin bash : fonctionne même si $PATH ne contient
-# plus aucun binaire externe.
-if ! command -v jq >/dev/null 2>&1; then
-  echo "⚠️  ezacae-base : jq est introuvable — le contrôle de dérive de version des plugins ezacae est inopérant."
-  exit 0
-fi
-
 incapacite() {
   echo "⚠️  ezacae-base : $1 — le contrôle de dérive de version des plugins ezacae est inopérant."
   exit 0
 }
+
+# `command -v` est un builtin bash : fonctionne même si $PATH ne contient
+# plus aucun binaire externe. incapacite() ne dépend pas de jq : la définir
+# avant cette garde permet de l'appeler ici au lieu de recopier son gabarit.
+if ! command -v jq >/dev/null 2>&1; then
+  incapacite "jq est introuvable"
+fi
 
 KM="$PLUGINS_HOME/known_marketplaces.json"
 

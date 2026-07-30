@@ -543,6 +543,50 @@ JSON
 
 t5_2_detail_directory
 
+# =====================================================================
+# Addendum — correctifs issus de la revue de code de la MR 18 (RD-22)
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Tâche A.2 : la garde jq doit appeler incapacite() au lieu de recopier
+# son gabarit de message. Les deux gabarits sont déjà, aujourd'hui,
+# identiques au caractère près (duplication texte-à-texte, pas encore
+# divergente) — une comparaison de sortie ne peut donc pas capturer le
+# défaut réel : c'est une duplication du SOURCE, pas un écart observable
+# en boîte noire. Le test verrouille donc directement le fait que le
+# gabarit n'est plus écrit qu'une seule fois dans le script (à
+# l'intérieur de incapacite()) ; avant le correctif, il est écrit deux
+# fois, à trois lignes d'intervalle.
+# =====================================================================
+t_a2() {
+  local boilerplate="le contrôle de dérive de version des plugins ezacae est inopérant."
+  local occurrences
+  occurrences="$(grep -c -- "$boilerplate" "$SCRIPT")"
+  eq "A.2 gabarit d'incapacité écrit une seule fois dans la source (jq appelle incapacite)" "1" "$occurrences"
+
+  # Verrou fonctionnel complémentaire : une fois la garde jq réécrite pour
+  # appeler incapacite(), le message qu'elle produit reste, par
+  # construction, le même gabarit que les autres cas d'incapacité — on le
+  # vérifie en le comparant, une fois la raison neutralisée, à un autre
+  # cas d'incapacité réel (known_marketplaces.json absent, tâche 1.3a).
+  local tmp; tmp="$(mktemp -d)"
+  local home="$tmp/plugins"; mkdir -p "$home"
+  local emptybin="$tmp/emptybin"; mkdir -p "$emptybin"
+
+  local jq_absent_out other_incapacite_out
+  jq_absent_out=$(EZACAE_PLUGINS_HOME="$tmp/plugins-inexistant" PATH="$emptybin" "$BASH_BIN" "$SCRIPT" 2>&1)
+  other_incapacite_out=$(run_check "$home")
+
+  local jq_absent_suffix other_suffix
+  jq_absent_suffix="${jq_absent_out#*—}"
+  other_suffix="${other_incapacite_out#*—}"
+  eq "A.2 gabarit jq absent = gabarit des autres incapacités (suffixe identique)" "$other_suffix" "$jq_absent_suffix"
+
+  rm -rf "$tmp"
+}
+
+t_a2
+
 echo "-----"
 echo "PASS=$pass FAIL=$fail"
 [ "$fail" -eq 0 ] || exit 1
