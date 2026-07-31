@@ -14,9 +14,9 @@
 # Autorité retenue : la capacité de PRODUCTION — sections « ## <fichier>.md » de
 # references/stack-templates.md pour les documents techniques, une commande
 # dédiée par document produit pour les documents produit. Volontairement PAS
-# file_order() de gen-mkdocs.sh : c'est un ordre d'AFFICHAGE permissif (il accepte
-# n'importe quel .md via repli titlecase), pas une prescription — et ce script
-# quitte le plugin en RD-21.
+# l'ordre d'affichage du générateur de mkdocs.yml : c'est un ordre permissif (il
+# accepte n'importe quel .md via repli titlecase), pas une prescription — et ce
+# générateur a quitté le plugin en RD-21, il vit désormais dans ezacae-ci-utils.
 #
 # Aucune dépendance externe. Compatible bash 3.2.
 
