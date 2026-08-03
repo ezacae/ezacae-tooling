@@ -46,6 +46,25 @@ Autre variante à écarter pour la même raison : bufferiser le corps dans une v
 
 **Donc : le cas « sortie vers un fichier » se traite à part, et un téléchargement échoué ne doit laisser aucun fichier derrière lui.** C'est aujourd'hui un cas propre ; la seule façon de le casser est de le corriger sans y penser.
 
+### Le même invariant, cassé aujourd'hui : deux pièces jointes de même nom
+
+Ce n'est pas une hypothèse, c'est arrivé sur ce ticket. RD-29 portait deux pièces jointes nommées `cadrage-rd-29-erreurs-helpers-jira.md` — la version initiale et la version corrigée. La boucle de `jira-download.sh:29-35` écrit chaque pièce jointe à `${DEST}/${name}` : deux noms identiques, deux écritures au même chemin, la seconde écrase la première **sans un mot**. Sortie observée :
+
+```
+↓ /tmp/jira-RD-29/cadrage-rd-29-erreurs-helpers-jira.md
+↓ /tmp/jira-RD-29/cadrage-rd-29-erreurs-helpers-jira.md     ← même chemin
+↓ /tmp/jira-RD-29/test_jira_curl_errors.sh
+✅ 3 pièce(s) jointe(s) récupérée(s)
+```
+
+Le compteur annonce trois fichiers, le dossier en contient deux, et le survivant est celui que l'ordre de l'API a désigné — en l'occurrence **la version périmée**. Sarah, qui prend la fiche téléchargée comme source de vérité, a conçu à partir du mauvais document jusqu'à ce que la vérification l'attrape.
+
+C'est exactement l'invariant du bloquant ci-dessus, à la même ligne du même script : **un téléchargement ne doit jamais produire silencieusement un fichier faux**. Deux visages du même défaut, corrigés d'un geste.
+
+Le minimum est de ne pas mentir : soit refuser, soit dédupliquer le nom (suffixe par l'id de la pièce jointe, disponible dans les métadonnées déjà lues ligne 26), et dans tous les cas le dire. Le compteur final doit compter des fichiers réellement écrits.
+
+Note de terrain : il n'existe aucun helper pour **supprimer** une pièce jointe, donc corriger un document attaché impose soit un nom versionné, soit un passage par l'interface Jira. Ce manque est hors périmètre ici, mais il alimente le défaut : c'est lui qui produit les doublons de nom.
+
 ## La contrainte qui commande tout : à qui appartient stdout
 
 `jira-lib.sh` n'est pas sourcé que par les scripts. Le hook `PreToolUse` `jira-guard.sh` le source aussi, et appelle `jira_status` — donc `jira_curl` — pour lire le statut courant du ticket. Ce hook **écrit sa décision en JSON sur stdout**, que le CLI parse. L'avertissement est déjà en tête du fichier, lignes 8-9.
@@ -73,7 +92,9 @@ Corollaire pour la conception : le hook baisse volontairement le budget de temps
 
 Une amorce est livrée avec ce cadrage : `tests/test_jira_curl_errors.sh` et `tests/fake-jira.py` (un faux Jira sur `127.0.0.1`, port éphémère, aucun credential réel). Lancée en l'état, elle donne `PASS=3 FAIL=2` : les deux échecs sont le défaut à corriger, les trois succès sont des garde-fous de non-régression — le fichier absent après un téléchargement raté, et le stdout resté vide. Le correctif naïf les fait passer au rouge, ce qui est exactement leur raison d'être.
 
-**Hors périmètre** : la mise en forme du contenu écrit dans Jira (RD-23) ; l'ajout de nouvelles opérations aux helpers ; toute reprise automatique d'un appel échoué ; la réécriture de la garde de statut.
+**`jira-download.sh`** — les deux visages de l'invariant « pas de fichier faux » : aucun fichier laissé après un échec, et pas d'écrasement silencieux entre deux pièces jointes homonymes.
+
+**Hors périmètre** : la mise en forme du contenu écrit dans Jira (RD-23) ; l'ajout de nouvelles opérations aux helpers, dont la **suppression de pièce jointe** qui manque aujourd'hui ; toute reprise automatique d'un appel échoué ; la réécriture de la garde de statut.
 
 ## Qui est impacté
 
@@ -93,7 +114,7 @@ Une amorce est livrée avec ce cadrage : `tests/test_jira_curl_errors.sh` et `te
 1. **Le message part sur stderr**, jamais stdout. Le stdout du hook est un JSON parsé ; celui des lectures est consommé par `jq`.
 2. **Les chemins de succès sont inchangés, au caractère près.** C'est la garantie qui permet de corriger un point traversé par onze scripts sans les relire un par un.
 3. **Le code de sortie reste non nul.** La détection fonctionne déjà ; seul l'affichage manque. La valeur exacte est libre : aucun appelant ne la teste. Corollaire : **aucun test ne doit asserter un numéro de code** (56 en HTTPS, 22 en HTTP local — cf. fait 5).
-4. **Un échec ne laisse aucun fichier à la destination.** Vaut pour `jira-download.sh:32`, seul appel qui écrit hors JSON. Un fichier vide ou porteur du JSON d'erreur se fait passer pour la pièce jointe.
+4. **Un téléchargement ne produit jamais silencieusement un fichier faux.** Deux cas, même ligne (`jira-download.sh:32`), seul appel qui écrit hors JSON : un échec ne laisse aucun fichier à la destination (ni vide, ni porteur du JSON d'erreur), et deux pièces jointes de même nom ne s'écrasent pas en silence. Le compteur final compte des fichiers réellement écrits.
 5. **Un message par échec, pas deux.** `jira-transition.sh:34` et `:45` impriment déjà leur propre diagnostic (statut introuvable, liste des transitions disponibles). Un bloc brut posé au-dessus donnerait deux messages pour une seule erreur, et le second est le plus utile.
 6. **Un appelant doit pouvoir se taire.** L'affichage centralisé s'impose à tous, y compris à ceux qui *attendent* un échec (sondes, recherches optionnelles du hook). Le hook n'y échappe aujourd'hui que parce qu'il redirigeait déjà stderr — c'est un hasard heureux, pas un choix de conception.
 7. **Pas de second appel réseau** pour récupérer le message. Le corps arrive avec la réponse ; il suffit de ne plus le jeter. Un appel de rattrapage doublerait le coût et sortirait du budget de 6 secondes du hook.
