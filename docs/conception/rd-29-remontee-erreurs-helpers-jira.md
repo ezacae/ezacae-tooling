@@ -82,6 +82,7 @@ jira_curl() {
 Points de vigilance, à couvrir par les tests :
 
 - `--fail` **disparaît** : sans lui, curl sort en 0 sur un 4xx, et c'est `%{http_code}` qui décide. C'est le cœur du correctif.
+- **`jira_curl` refuse `-o`/`--output` dans ses arguments** (une ligne, avant l'appel). Le contrat « rien sur stdout en cas d'échec » ne protège pas un fichier de sortie : un futur appelant qui passerait `-o` recevrait le corps d'erreur dans son fichier — exactement la corruption que `jira_curl_to_file` existe pour empêcher. La garde rend le mauvais usage impossible au lieu de l'espérer absent.
 - La substitution de commande retire les sauts de ligne **de fin de capture** ; comme la capture finit par le code HTTP, les sauts de ligne internes au corps sont intacts. `printf '%s'` n'en rajoute pas.
 - Réponse vide (`204 No Content`, cas des transitions) : la capture vaut `"\n204"`, donc `body` vide et `code=204`. Le contrat tient.
 
@@ -91,6 +92,7 @@ Points de vigilance, à couvrir par les tests :
 - 2xx → `mv` vers la destination. C'est la seule façon d'y créer un fichier.
 - non-2xx ou échec transport → temporaire supprimé, **aucun fichier à destination**, message sur stderr, code non nul.
 - Le corps d'erreur est tronqué à 2 000 octets avant affichage (une page HTML de proxy ne doit pas noyer le terminal).
+- Un `trap` local nettoie le temporaire sur interruption (SIGINT/SIGTERM). Un SIGKILL peut laisser un `.part.*` orphelin — assumé et documenté dans l'en-tête de la fonction ; le test « aucun `.part.*` restant » porte sur les chemins d'échec normaux, pas sur kill -9.
 
 **`jira_report_http_error <code> <corps>`** — le seul endroit qui écrit un message d'erreur.
 
@@ -122,7 +124,9 @@ Conception terminée → CONCEPTION VALIDATION | ecran=true | requis: worklog
 Annulé              → Annulé                | ecran=true | requis: worklog,resolution
 ```
 
-Si un champ requis manque, le helper **refuse avant d'envoyer** (l'envoi échouerait de toute façon) et nomme ce qui manque : `--worklog` s'il s'agit du temps consacré, et une phrase explicite pour un champ que le helper ne sait pas transmettre — `resolution`, par exemple, qui n'a pas d'option.
+**Le pré-vol ne refuse que ce qui est mesuré fatal : `worklog`.** Si `worklog` est requis et `--worklog` absent, refuser avant d'envoyer en citant l'option — c'est le cas d'origine du ticket, dont l'échec est prouvé. Pour **tout autre champ requis** (`resolution`, champ custom…), **tenter le POST quand même** et laisser la nouvelle remontée d'erreur parler : les écrans Jira portent souvent une valeur par défaut, et un refus côté client fermerait des transitions que le serveur accepte. Le cas concret est l'annulation — `Annulé` exige `worklog,resolution` (mesuré), la garde de statut l'autorise **toujours** (`jira-lib.sh:94-96`, c'est la soupape du pipeline), et refuser en pré-vol sur `resolution` la rendrait impossible via le helper alors qu'une résolution par défaut peut suffire côté serveur. Règle générale : **pré-vol seulement sur ce qui est mesuré fatal ; tentative pour ce qu'on ne sait pas.**
+
+**La comparaison de statut reste dans jq, jamais en shell.** `jira_transition_id_for_status` disparaît, mais son commentaire (`jira-lib.sh:49-52`) protège un piège qui survit au remplacement : un `tr '[:lower:]' '[:upper:]'` shell dépend de la locale et rate `é`→`É`, d'où un faux négatif sur « Annulé ». L'extraction de l'id depuis le JSON de `jira_transitions` fait donc sa correspondance **entièrement dans jq** (`ascii_upcase` des deux côtés), et le faux Jira des tests expose **au moins un statut accentué** (`Annulé`) pour que la régression soit détectable — les statuts ASCII ne la révèlent pas.
 
 **2. `--assignee` accepte un nom d'affichage.** `jira_looks_like_account_id` reconnaît un identifiant (24 caractères hexadécimaux — mesuré : `6256cf820630bd0070761e65` — ou une forme contenant `:`). Sinon `jira_resolve_assignee <KEY> <nom>` interroge `GET /rest/api/3/user/assignable/search` avec `--get --data-urlencode` (l'encodage est délégué à curl, jamais fait à la main) :
 
@@ -142,6 +146,8 @@ La métadonnée lue en `jira-download.sh:26` contient déjà l'`id` de chaque pi
 ```
 
 **Bash 3.2 : pas de tableau associatif.** Les noms déjà vus sont tenus dans une variable multi-lignes, testée par `grep -Fxq`. Un nom de pièce jointe peut contenir des espaces : la comparaison se fait sur la ligne entière, jamais par découpage de mots.
+
+**Le nom de pièce jointe est réduit à son `basename` avant tout usage.** `name` vient des métadonnées de l'API et atterrit aujourd'hui tel quel dans `${DEST}/${name}` : un nom contenant `/` (poussé par un autre client API — Jira ne normalise pas tout) écrirait **hors** du dossier de destination (`../../x` remonte l'arborescence). Défaut préexistant, mais cette conception réécrit exactement cette boucle : le corriger ici coûte une ligne (`basename`), le laisser serait la version sécurité du piège que ce document dénonce. Un cas du faux Jira sert un nom avec `/` et le test vérifie que le fichier reste **dans** `DEST`.
 
 Le compteur n'est incrémenté qu'**après** une écriture réussie.
 
@@ -163,6 +169,9 @@ Aucun écran, aucune maquette : le livrable est constitué de scripts en ligne d
 | Corps non-JSON (proxy, 401 sans corps) | Repli sur le code HTTP + 200 caractères. Test avec une réponse HTML |
 | Bash 3.2 | `bash -n` sur le bash 3.2 du poste, et aucune syntaxe de bash 4 |
 | Un appelant veut échouer en silence | `JIRA_QUIET_ERRORS=1`. Test des deux modes |
+| Le pré-vol ferme une transition que le serveur accepte | Pré-vol limité à `worklog` (mesuré fatal) ; tout autre champ requis → tentative + remontée d'erreur. Test : `Annulé` avec `--worklog` seul → POST émis, rc=0 |
+| Régression d'accent au remplacement de `jira_transition_id_for_status` | Correspondance dans jq (`ascii_upcase`), statut `Annulé` dans le faux Jira. Un `tr` shell passerait les tests ASCII et raterait la prod |
+| Nom de pièce jointe contenant `/` | `basename` avant tout usage ; test : le fichier reste dans `DEST` |
 
 ## Plan d'implémentation
 
@@ -179,7 +188,8 @@ Structure bug : **régression (RED) → correctif (GREEN) → non-régression**.
 
 #### Tâche 1.1 : étendre le faux Jira
 **Fichiers :** Modifier `plugins/ezacae-jira/tests/fake-jira.py`
-- [ ] Ajouter les routes : `400` avec `errors` seul, `401` avec un corps HTML, `404` avec `errorMessages`, `204` sans corps, contenu de pièce jointe en succès, et une liste de pièces jointes contenant **deux entrées de même nom** avec des `id` distincts
+- [ ] Ajouter les routes : `400` avec `errors` seul, `401` avec un corps HTML, `404` avec `errorMessages`, `204` sans corps, contenu de pièce jointe en succès (dont un binaire avec octet nul), et une liste de pièces jointes contenant **deux entrées de même nom** avec des `id` distincts + **une entrée dont le nom contient `/`** (cas basename)
+- [ ] Ajouter la route transitions avec `expand` : un statut **accentué** (`Annulé`) requérant `worklog` **et** `resolution`, dont le POST **réussit** avec worklog seul (résolution par défaut serveur) ; un compteur de POST reçus consultable (`/post-count`)
 - [ ] Vérifier à la main : `python3 fake-jira.py` démarre et imprime son port
 - [ ] Commit
 
@@ -213,17 +223,20 @@ Structure bug : **régression (RED) → correctif (GREEN) → non-régression**.
 - [ ] Lancer la suite : aucun fichier laissé après échec, contenu binaire intact
 - [ ] Commit
 
-#### Tâche 2.4 : déduplication des homonymes
+#### Tâche 2.4 : déduplication des homonymes + basename
 **Fichiers :** Modifier `jira-download.sh`
+- [ ] Réduire `name` à son `basename` avant tout usage (un nom avec `/` ne sort jamais de `DEST`)
 - [ ] Remonter l'`id` dans le flux `jq` de la ligne 35 ; tenir la liste des noms vus (compatible bash 3.2, `grep -Fxq`) ; suffixer et **le dire** ; compter après écriture
-- [ ] Lancer la suite : deux homonymes → deux fichiers, compteur juste
+- [ ] Lancer la suite : deux homonymes → deux fichiers, compteur juste, nom avec `/` confiné dans `DEST`
 - [ ] Commit
 
 #### Tâche 2.5 : indice `--worklog`
 **Fichiers :** Modifier `jira-lib.sh` (ajout de `jira_transitions`, suppression de `jira_transition_id_for_status`), `jira-transition.sh`
 - [ ] Un seul appel aux transitions avec `expand=transitions.fields` ; en tirer l'id **et** les champs requis
-- [ ] Refuser avant l'envoi si un champ requis manque, en nommant `--worklog` ou le champ non transmissible
-- [ ] Test hors-ligne : transition exigeant un worklog, lancée sans l'option → message citant `--worklog`, et **aucun POST émis** (le faux Jira compte les requêtes)
+- [ ] La correspondance de statut cible reste **entièrement dans jq** (`ascii_upcase` des deux côtés — jamais `tr` shell, cf. le piège de locale documenté à `jira-lib.sh:49-52`)
+- [ ] Pré-vol **worklog seulement** : requis + `--worklog` absent → refus avant envoi, message citant l'option, **aucun POST émis** (compteur du faux Jira)
+- [ ] Tout autre champ requis manquant (`resolution`…) → **tenter le POST** et laisser la remontée d'erreur parler ; test : `Annulé` (worklog+resolution requis, défaut serveur) lancé avec `--worklog` seul → POST émis, rc=0
+- [ ] Test de l'accent : la cible `annulé`/`ANNULÉ` matche le statut `Annulé` du faux Jira
 - [ ] Commit
 
 #### Tâche 2.6 : `--assignee` par nom d'affichage
@@ -236,10 +249,10 @@ Structure bug : **régression (RED) → correctif (GREEN) → non-régression**.
 
 ### Phase 3 — Non-régression
 
-#### Tâche 3.1 : les chemins de succès, octet pour octet
-**Fichiers :** Modifier `plugins/ezacae-jira/tests/test_jira_curl_errors.sh`
-- [ ] Capturer la sortie d'une lecture réussie **avant** le correctif (depuis `git stash` ou le commit parent) et la comparer à la sortie après : `cmp` doit être silencieux
-- [ ] Vérifier la même chose sur un contenu binaire téléchargé (`cmp` sur le fichier)
+#### Tâche 3.1 : les chemins de succès, octet pour octet — par fixtures d'or
+**Fichiers :** Modifier `plugins/ezacae-jira/tests/test_jira_curl_errors.sh`, créer `plugins/ezacae-jira/tests/fixtures/rd29/`
+- [ ] Figer en fixtures commitées la sortie **attendue** d'une lecture réussie (corps JSON servi par le faux Jira → sortie exacte du helper) et un contenu binaire de pièce jointe (avec octet nul) ; `cmp` contre la fixture doit être silencieux
+- [ ] Ne pas capturer d'état « avant » à l'exécution (`git stash`/checkout au milieu d'une suite : fragile, et le worktree de developer n'a pas d'« avant ») — la fixture d'or **est** la référence, relue par la revue
 - [ ] Commit
 
 #### Tâche 3.2 : preuves fraîches
