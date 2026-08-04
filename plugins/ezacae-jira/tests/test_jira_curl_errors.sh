@@ -26,6 +26,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS="$HERE/../scripts"
 FAUX_JIRA="${FAUX_JIRA:-$HERE/fake-jira.py}"
+FIXTURES="$HERE/fixtures/rd29"
 
 PASS=0; FAIL=0
 ok()   { echo "PASS  $1"; PASS=$((PASS+1)); }
@@ -185,6 +186,25 @@ else
 fi
 grep -q "accountId" "$TMP/resolveN.err" && ok "la liste d'homonymes rappelle qu'un accountId est accepté" \
   || nope "pas de rappel accountId sur homonymes : $(tr -d '\n' <"$TMP/resolveN.err")"
+
+# === Fixtures d'or : chemins de succès inchangés, octet pour octet =============
+# La sortie d'une lecture réussie ne doit pas bouger d'un octet avec la
+# réécriture de jira_curl (plus de --fail). Référence figée et commitée, jamais
+# capturée à l'exécution (pas de git stash/checkout au milieu d'une suite).
+
+jira_curl "$(jira_base)/rest/api/3/issue/RD-OK" > "$TMP/rd-ok.json"
+if cmp -s "$TMP/rd-ok.json" "$FIXTURES/issue-rd-ok.json"; then
+  ok "jira_curl : sortie d'une lecture réussie identique à la fixture d'or (octet pour octet)"
+else
+  nope "jira_curl : sortie divergente de la fixture d'or : $(cmp "$TMP/rd-ok.json" "$FIXTURES/issue-rd-ok.json" 2>&1)"
+fi
+
+jira_curl_to_file "$TMP/binaire-obtenu.bin" "$JIRA_BASE_URL/attachment/content/2001"
+if cmp -s "$TMP/binaire-obtenu.bin" "$FIXTURES/binaire-attendu.bin"; then
+  ok "jira_curl_to_file : contenu binaire (octet nul) identique à la fixture d'or"
+else
+  nope "jira_curl_to_file : contenu binaire divergent de la fixture d'or : $(cmp "$TMP/binaire-obtenu.bin" "$FIXTURES/binaire-attendu.bin" 2>&1)"
+fi
 
 echo "----"
 echo "Résultat : PASS=$PASS FAIL=$FAIL"
