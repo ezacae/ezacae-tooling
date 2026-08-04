@@ -29,11 +29,108 @@ jira_require_creds() {
 
 jira_base() { printf '%s' "${JIRA_BASE_URL%/}"; }
 
+# --- Remontée d'erreur (RD-29) --------------------------------------------------
+
+# Écrit le message d'erreur HTTP de Jira sur STDERR — jamais sur stdout.
+# $1 = code HTTP, $2 = corps de la réponse (peut être vide ou non-JSON).
+# - Corps JSON avec errorMessages et/ou errors → les deux sont affichés (l'échec
+#   d'assignation ne remplit QUE `errors` ; errorMessages seul ne suffit pas).
+# - Corps vide ou non-JSON (proxy, HTML) → repli sur le code HTTP + 200 premiers
+#   caractères du corps, sur une ligne.
+# - Silencieux si JIRA_QUIET_ERRORS=1 (appelants qui s'attendent à un échec).
+# - Itère les messages ligne par ligne (jamais `printf ... $msgs` non quoté :
+#   les messages sont en français, ils contiennent des espaces).
+jira_report_http_error() {
+  [ "${JIRA_QUIET_ERRORS:-0}" = "1" ] && return 0
+  local code="$1" body="$2" msgs errs
+  {
+    if [ -n "$body" ] && msgs=$(printf '%s' "$body" | jq -e -r '.errorMessages[]?, (.errors // {} | to_entries[] | "\(.key) : \(.value)")' 2>/dev/null); then
+      echo "⛔ Jira a refusé la requête (HTTP $code)"
+      printf '%s\n' "$msgs" | while IFS= read -r line; do
+        [ -n "$line" ] && printf '   • %s\n' "$line"
+      done
+    else
+      echo "⛔ Jira a refusé la requête (HTTP $code)"
+      if [ -n "$body" ]; then
+        printf '   • %s\n' "$(printf '%s' "$body" | head -c 200)"
+      fi
+    fi
+  } >&2
+}
+
 # curl authentifié vers l'API JIRA. Le timeout est réglable via JIRA_CURL_MAX_TIME
 # (le hook le baisse pour rester dans son budget). Args : passés tels quels à curl.
+#
+# Contrat :
+#   2xx → le corps sur stdout, octet pour octet, code de retour 0.
+#   non-2xx → rien sur stdout, message sur stderr (jira_report_http_error), rc≠0.
+#   échec transport → curl a déjà parlé sur stderr via --show-error, rc≠0.
+#
+# Refuse -o/--output dans ses arguments : le contrat "rien sur stdout en cas
+# d'échec" ne protège pas un fichier de sortie. Utiliser jira_curl_to_file.
 jira_curl() {
-  curl --fail --silent --show-error --max-time "${JIRA_CURL_MAX_TIME:-20}" \
-    -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$@"
+  local a
+  for a in "$@"; do
+    case "$a" in
+      -o|--output) echo "⛔ jira_curl refuse -o/--output — utiliser jira_curl_to_file" >&2; return 2 ;;
+    esac
+  done
+  local out code body
+  out=$(curl --silent --show-error --write-out '\n%{http_code}' \
+          --max-time "${JIRA_CURL_MAX_TIME:-20}" \
+          -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$@") || return 1
+  code=${out##*$'\n'}
+  body=${out%$'\n'*}
+  case "$code" in
+    2*) printf '%s' "$body"; return 0 ;;
+  esac
+  jira_report_http_error "$code" "$body"
+  return 1
+}
+
+# Comme jira_curl, mais écrit le corps 2xx dans <destination> au lieu de stdout —
+# pour un contenu binaire ou volumineux (le corps ne passe jamais par une
+# variable shell : un octet nul la tronquerait).
+#
+# $1 = destination, reste = args curl…
+#
+# - Écrit dans <destination>.part.XXXXXX (même dossier → même système de fichiers).
+# - 2xx → mv vers la destination (seule façon d'y créer un fichier).
+# - non-2xx ou échec transport → temporaire supprimé, aucun fichier à destination,
+#   message sur stderr (corps tronqué à 2000 octets), code non nul.
+# - Un trap local nettoie le temporaire sur SIGINT/SIGTERM (un SIGKILL peut
+#   laisser un .part.* orphelin — assumé, hors périmètre des tests).
+jira_curl_to_file() {
+  local dest="$1"; shift
+  local tmp code rc
+  tmp=$(mktemp "${dest}.part.XXXXXX") || return 1
+  trap 'rm -f "$tmp"' INT TERM
+
+  code=$(curl --silent --show-error --write-out '%{http_code}' \
+           --max-time "${JIRA_CURL_MAX_TIME:-20}" \
+           -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -o "$tmp" "$@")
+  rc=$?
+  trap - INT TERM
+
+  if [ "$rc" -ne 0 ]; then
+    rm -f "$tmp"
+    echo "⛔ Échec réseau lors du téléchargement (curl rc=$rc)" >&2
+    return 1
+  fi
+
+  case "$code" in
+    2*)
+      mv "$tmp" "$dest"
+      return 0
+      ;;
+    *)
+      local body
+      body=$(head -c 2000 "$tmp" 2>/dev/null)
+      rm -f "$tmp"
+      jira_report_http_error "$code" "$body"
+      return 1
+      ;;
+  esac
 }
 
 # --- Lecture -------------------------------------------------------------------

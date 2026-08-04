@@ -25,13 +25,36 @@ mkdir -p "$DEST"
 
 META=$(jira_curl "$(jira_base)/rest/api/3/issue/${ISSUE}?fields=attachment")
 
+# Le nom de PJ vient des métadonnées API : un nom contenant '/' (poussé par un
+# autre client, Jira ne normalise pas tout) écrirait hors de DEST via '../..'.
+# basename le réduit avant tout usage — voir conception RD-29.
+#
+# Homonymes (même basename, id distincts) : compatible bash 3.2 (pas de tableau
+# associatif) — les noms déjà vus sont tenus dans une variable multi-lignes,
+# comparée ligne à ligne (grep -Fxq) puisqu'un nom peut contenir des espaces.
 COUNT=0
-while IFS=$'\t' read -r name url; do
+SEEN_NAMES=""
+while IFS=$'\t' read -r id name url; do
   [ -z "$name" ] && continue
-  if [ -n "$FILTER" ] && [[ "$name" != *"$FILTER"* ]]; then continue; fi
-  jira_curl -L "$url" -o "${DEST}/${name}"
-  echo "↓ ${DEST}/${name}"
+  BASE=$(basename "$name")
+  if [ -n "$FILTER" ] && [[ "$BASE" != *"$FILTER"* ]]; then continue; fi
+
+  if printf '%s\n' "$SEEN_NAMES" | grep -Fxq "$BASE"; then
+    STEM="${BASE%.*}"; EXT="${BASE##*.}"
+    if [ "$STEM" = "$EXT" ]; then
+      WRITE_NAME="${BASE}~${id}"
+    else
+      WRITE_NAME="${STEM}~${id}.${EXT}"
+    fi
+    echo "⚠ deuxième pièce jointe nommée « ${BASE} » → ${WRITE_NAME}" >&2
+  else
+    WRITE_NAME="$BASE"
+  fi
+  SEEN_NAMES=$(printf '%s\n%s' "$SEEN_NAMES" "$BASE")
+
+  jira_curl_to_file "${DEST}/${WRITE_NAME}" -L "$url"
+  echo "↓ ${DEST}/${WRITE_NAME}"
   COUNT=$((COUNT + 1))
-done < <(echo "$META" | jq -r '.fields.attachment[]? | "\(.filename)\t\(.content)"')
+done < <(echo "$META" | jq -r '.fields.attachment[]? | "\(.id)\t\(.filename)\t\(.content)"')
 
 echo "✅ $COUNT pièce(s) jointe(s) récupérée(s) dans $DEST"
