@@ -21,12 +21,14 @@ Routes couvertes (cf. conception docs/conception/rd-29-remontee-erreurs-helpers-
   GET  /attachment/content/<id>                      -> contenu (texte ou binaire), 404 si id inconnu
   GET  /204                                          -> 204 sans corps (test générique)
   GET  /post-count                                   -> {"count": N} POST reçus sur /transitions
+  GET  /search-count                                 -> {"count": N} GET reçus sur /user/assignable/search
 """
 import json
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 POST_COUNT = {"n": 0}
+SEARCH_COUNT = {"n": 0}
 
 # --- Corps d'erreur mesurés sur le vrai Jira (cf. conception, table de reproduction) ---
 ERR_404 = {
@@ -150,6 +152,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/post-count":
             return self._json(200, {"count": POST_COUNT["n"]})
 
+        if path == "/search-count":
+            return self._json(200, {"count": SEARCH_COUNT["n"]})
+
         if path.startswith("/attachment/content/"):
             aid = path.rsplit("/", 1)[-1]
             if aid == "404":
@@ -160,6 +165,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._raw(200, data)
 
         if path.startswith("/rest/api/3/user/assignable/search"):
+            SEARCH_COUNT["n"] += 1
             query = qs.get("query", [""])[0]
             return self._json(200, ASSIGNABLE.get(query, []))
 

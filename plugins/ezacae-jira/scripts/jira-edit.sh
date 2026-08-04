@@ -43,10 +43,8 @@ while [ "$#" -gt 0 ]; do
       elif jira_looks_like_account_id "$ARG"; then
         set_field assignee "$(jq -n --arg a "$ARG" '{accountId: $a}')"
       else
-        ACCOUNT_ID=$(jira_resolve_assignee "$ISSUE" "$ARG") || exit 1
-        DISPLAY_NAME=$(jira_curl --get --data-urlencode "query=$ARG" \
-          "$(jira_base)/rest/api/3/user/assignable/search?issueKey=$ISSUE" \
-          | jq -r --arg id "$ACCOUNT_ID" '.[] | select(.accountId==$id) | .displayName')
+        RESOLVED=$(jira_resolve_assignee "$ISSUE" "$ARG") || exit 1
+        IFS=$'\t' read -r ACCOUNT_ID DISPLAY_NAME <<<"$RESOLVED"
         echo "→ assigné à ${DISPLAY_NAME} (${ACCOUNT_ID})"
         set_field assignee "$(jq -n --arg a "$ACCOUNT_ID" '{accountId: $a}')"
       fi

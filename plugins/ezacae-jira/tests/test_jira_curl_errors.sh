@@ -52,6 +52,7 @@ export JIRA_API_TOKEN="jeton-secret-de-test"
 . "$SCRIPTS/jira-lib.sh"
 
 post_count() { curl -s "$JIRA_BASE_URL/post-count" | jq -r '.count'; }
+search_count() { curl -s "$JIRA_BASE_URL/search-count" | jq -r '.count'; }
 
 # === 1-4. jira_curl : message, deux champs, non-JSON, stdout, jeton ==============
 
@@ -194,11 +195,27 @@ AFTER2=$(post_count)
 # === 10. --assignee par nom d'affichage ==========================================
 
 RESOLVE_OUT=$(jira_resolve_assignee RD-1 "Alexandre" 2>"$TMP/resolve1.err")
-if [ "$RESOLVE_OUT" = "6256cf820630bd0070761e65" ]; then
+RESOLVE_ACCOUNT_ID="${RESOLVE_OUT%%$'\t'*}"
+if [ "$RESOLVE_ACCOUNT_ID" = "6256cf820630bd0070761e65" ]; then
   ok "jira_resolve_assignee : une correspondance → accountId résolu"
 else
   nope "jira_resolve_assignee : résolution unique incorrecte : '$RESOLVE_OUT' ($(tr -d '\n' <"$TMP/resolve1.err"))"
 fi
+case "$RESOLVE_OUT" in
+  *$'\t'"Alexandre Husset") ok "jira_resolve_assignee : renvoie accountId<TAB>displayName (Correction 2)" ;;
+  *) nope "jira_resolve_assignee : displayName absent ou mal formé dans la sortie : '$RESOLVE_OUT'" ;;
+esac
+
+# --- Correction 2 (recommandé) : un seul appel réseau au search sur --assignee <nom> ---
+SEARCH_BEFORE=$(search_count)
+"$SCRIPTS/jira-edit.sh" RD-1 --assignee Alexandre >"$TMP/editassignee.out" 2>"$TMP/editassignee.err"
+RC_EDITASSIGNEE=$?
+SEARCH_AFTER=$(search_count)
+[ "$RC_EDITASSIGNEE" -eq 0 ] && ok "jira-edit.sh --assignee Alexandre réussit (rc=0)" \
+  || nope "jira-edit.sh --assignee Alexandre échoue (rc=$RC_EDITASSIGNEE) : $(tr -d '\n' <"$TMP/editassignee.err")"
+SEARCH_DELTA=$((SEARCH_AFTER - SEARCH_BEFORE))
+[ "$SEARCH_DELTA" -eq 1 ] && ok "jira-edit.sh --assignee <nom> : un seul appel réseau au search (delta=$SEARCH_DELTA)" \
+  || nope "jira-edit.sh --assignee <nom> : $SEARCH_DELTA appel(s) réseau au search (attendu 1)"
 
 if jira_resolve_assignee RD-1 "Personne" >"$TMP/resolve0.out" 2>"$TMP/resolve0.err"; then
   nope "jira_resolve_assignee : aurait dû refuser sur zéro correspondance"

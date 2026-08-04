@@ -241,9 +241,13 @@ jira_looks_like_account_id() {
   return 1
 }
 
-# $1 = ISSUE-KEY, $2 = nom d'affichage → accountId sur stdout si une seule
-# correspondance ; sinon refuse (message sur stderr, rc≠0). L'encodage de la
-# requête est délégué à curl (--get --data-urlencode), jamais fait à la main.
+# $1 = ISSUE-KEY, $2 = nom d'affichage → "accountId<TAB>displayName" sur stdout
+# si une seule correspondance (découpé par l'appelant via IFS=$'\t' read -r) ;
+# sinon refuse (message sur stderr, rc≠0). Renvoyer aussi displayName évite à
+# l'appelant de refaire le même appel réseau pour l'afficher (Correction 2,
+# RD-29 : jira-edit.sh relançait /user/assignable/search une seconde fois pour
+# le seul displayName). L'encodage de la requête est délégué à curl
+# (--get --data-urlencode), jamais fait à la main.
 jira_resolve_assignee() {
   local issue="$1" name="$2" result n
   result=$(jira_curl --get --data-urlencode "query=$name" \
@@ -255,7 +259,7 @@ jira_resolve_assignee() {
       return 1
       ;;
     1)
-      printf '%s' "$result" | jq -r '.[0].accountId'
+      printf '%s' "$result" | jq -r '.[0] | "\(.accountId)\t\(.displayName)"'
       return 0
       ;;
     *)
