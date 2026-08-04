@@ -93,6 +93,35 @@ fi
 grep -q "existe pas" "$TMP/dl.err" && ok "jira-download.sh affiche le message Jira sur stderr" \
   || nope "jira-download.sh ne montre pas le message Jira : $(tr -d '\n' <"$TMP/dl.err")"
 
+# === 5bis. Correction 1 (bloquant) : échec transport sous set -e =================
+# Sous set -e (présent dans les appelants réels), une substitution de commande
+# non protégée tue le script AVANT le nettoyage du .part.* et avant le message
+# — cf. conception, "Corrections de revue" #1. Reproduction fidèle : la fonction
+# est appelée dans un sous-shell bash -c avec set -euo pipefail, exactement les
+# options des appelants (jira-download.sh etc.), contre un port fermé local
+# (127.0.0.1:1 → connexion refusée immédiate, pas de dépendance réseau externe).
+
+DEST_NET="$TMP/pj-netfail/cible.bin"
+mkdir -p "$(dirname "$DEST_NET")"
+NETFAIL_SCRIPTS="$SCRIPTS" NETFAIL_DEST="$DEST_NET" \
+  JIRA_EMAIL="$JIRA_EMAIL" JIRA_API_TOKEN="$JIRA_API_TOKEN" \
+  bash -c '
+    set -euo pipefail
+    . "$NETFAIL_SCRIPTS/jira-lib.sh"
+    jira_curl_to_file "$NETFAIL_DEST" "http://127.0.0.1:1/nope"
+  ' >"$TMP/netfail.out" 2>"$TMP/netfail.err"
+RC_NET=$?
+
+if find "$(dirname "$DEST_NET")" -maxdepth 1 -name '*.part.*' 2>/dev/null | grep -q .; then
+  nope "jira_curl_to_file (échec transport sous set -e) : .part.* orphelin laissé à destination"
+else
+  ok "jira_curl_to_file (échec transport sous set -e) : aucun .part.* laissé"
+fi
+grep -q "Échec réseau" "$TMP/netfail.err" && ok "jira_curl_to_file (échec transport sous set -e) : message '⛔ Échec réseau' affiché" \
+  || nope "jira_curl_to_file (échec transport sous set -e) : message absent : $(tr -d '\n' <"$TMP/netfail.err")"
+[ "$RC_NET" -ne 0 ] && ok "jira_curl_to_file (échec transport sous set -e) : code de retour non nul ($RC_NET)" \
+  || nope "jira_curl_to_file (échec transport sous set -e) : code de retour zéro malgré l'échec"
+
 # === 6-7. Homonymes + basename ('..') ============================================
 
 DEST2="$TMP/pj-attach"

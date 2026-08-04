@@ -104,12 +104,22 @@ jira_curl_to_file() {
   local dest="$1"; shift
   local tmp code rc
   tmp=$(mktemp "${dest}.part.XXXXXX") || return 1
+  # ⚠️ Ce trap est PROCESS-WIDE, pas local à la fonction : bash n'a pas de trap
+  # scopé à une fonction. Il écrase le handler INT/TERM du processus appelant
+  # pendant l'appel curl, puis le remet à "-" (défaut) juste après — donc si
+  # l'appelant avait posé son propre trap INT/TERM, il est perdu, pas restauré.
+  # Aucun appelant ne pose de trap aujourd'hui (vérifié) ; à surveiller si l'un
+  # en pose un jour.
   trap 'rm -f "$tmp"' INT TERM
 
+  # La substitution de commande est protégée du set -e des appelants (même
+  # idiome que jira_curl ci-dessus) : sans le && rc=0 || rc=$?, un échec
+  # transport (DNS, connexion refusée, timeout — curl rc≠0) ferait sortir le
+  # script AVANT cette ligne sous set -e, laissant le .part.* orphelin et
+  # perdant le message d'erreur (cf. conception RD-29, Corrections de revue #1).
   code=$(curl --silent --show-error --write-out '%{http_code}' \
            --max-time "${JIRA_CURL_MAX_TIME:-20}" \
-           -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -o "$tmp" "$@")
-  rc=$?
+           -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -o "$tmp" "$@") && rc=0 || rc=$?
   trap - INT TERM
 
   if [ "$rc" -ne 0 ]; then
