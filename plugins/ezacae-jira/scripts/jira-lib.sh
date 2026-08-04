@@ -215,6 +215,49 @@ jira_pipeline_guard() {
   return 1
 }
 
+# --- Résolution d'assigné (RD-29) -----------------------------------------------
+
+# $1 = chaîne → 0 si elle ressemble à un accountId Jira (24 caractères
+# hexadécimaux — mesuré : 6256cf820630bd0070761e65 — ou une forme contenant
+# ':', ex. compte de service). 1 sinon (probablement un nom d'affichage).
+jira_looks_like_account_id() {
+  case "$1" in
+    *:*) return 0 ;;
+  esac
+  case "$1" in
+    [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])
+      return 0 ;;
+  esac
+  return 1
+}
+
+# $1 = ISSUE-KEY, $2 = nom d'affichage → accountId sur stdout si une seule
+# correspondance ; sinon refuse (message sur stderr, rc≠0). L'encodage de la
+# requête est délégué à curl (--get --data-urlencode), jamais fait à la main.
+jira_resolve_assignee() {
+  local issue="$1" name="$2" result n
+  result=$(jira_curl --get --data-urlencode "query=$name" \
+    "$(jira_base)/rest/api/3/user/assignable/search?issueKey=$issue") || return 1
+  n=$(printf '%s' "$result" | jq 'length')
+  case "$n" in
+    0)
+      echo "⛔ aucun utilisateur assignable ne correspond à « $name » sur $issue" >&2
+      return 1
+      ;;
+    1)
+      printf '%s' "$result" | jq -r '.[0].accountId'
+      return 0
+      ;;
+    *)
+      {
+        echo "⛔ plusieurs utilisateurs assignables correspondent à « $name » sur $issue — précise avec un accountId :"
+        printf '%s' "$result" | jq -r '.[] | "   • \(.displayName) — \(.accountId)"'
+      } >&2
+      return 1
+      ;;
+  esac
+}
+
 # --- ADF (Atlassian Document Format) ------------------------------------------
 
 # Convertit du texte multi-lignes (stdin) en document ADF (une ligne = un
