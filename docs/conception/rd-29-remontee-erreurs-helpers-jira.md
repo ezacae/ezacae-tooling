@@ -264,6 +264,30 @@ Structure bug : **régression (RED) → correctif (GREEN) → non-régression**.
 - [ ] Vérifier la fusion à blanc avec RD-23 : `git merge-tree --write-tree origin/rd-23-cadrage-mise-en-forme-jira <branche>` — coller le résultat dans la MR
 - [ ] Commit
 
+## Corrections de revue (post-implémentation)
+
+La première implémentation a passé les 29 tests et la vérif réelle contre Jira, mais une revue indépendante a trouvé un défaut que la suite ne couvrait pas. Corrections à appliquer, dans le même périmètre.
+
+### Correction 1 (bloquant) — `jira_curl_to_file` laisse un `.part.*` orphelin sur échec transport
+
+Sous `set -e` (présent dans les trois appelants), la ligne `code=$(curl … -o "$tmp" "$@")` **tue le script avant `rc=$?`** quand curl échoue au niveau transport (DNS, connexion refusée, timeout). Le bloc de nettoyage (`rm -f "$tmp"`, message `⛔ Échec réseau`) ne s'exécute jamais → fichier temporaire laissé à la destination, message perdu. Viole l'invariant « un téléchargement échoué ne laisse aucun fichier ».
+
+Reproduit : `jira_curl_to_file <dest> http://127.0.0.1:1/nope` sous `set -euo pipefail` → `dest.part.XXXXXX` laissé, seul le `curl: (7)` brut visible.
+
+Correctif : protéger la substitution du `set -e`, même idiome que `jira_curl` (`out=$(curl …) || return 1`) : `code=$(curl … -o "$tmp" "$@") && rc=0 || rc=$?`. Test : un cas pointant un port fermé (ou hôte injoignable), vérifiant **l'absence de `.part.*`** à la destination **et** la présence du message `⛔ Échec réseau`. La suite actuelle ne l'attrape pas car son cas d'échec simule un 404 (curl rc=0), jamais une panne transport.
+
+### Correction 2 (recommandé) — `--assignee <nom>` fait deux appels réseau
+
+`jira_resolve_assignee` interroge `/user/assignable/search`, obtient le tableau complet (dont `displayName`), mais ne renvoie que l'`accountId` ; `jira-edit.sh` re-lance alors la même requête pour récupérer le `displayName`. Faire renvoyer `accountId<TAB>displayName` par la fonction (découpé par l'appelant via `IFS=$'\t' read -r`) : zéro requête ajoutée, requête construite à un seul endroit. Ajouter un compteur `/search-count` au faux Jira, comme `/post-count`, pour figer l'invariant « un seul appel ».
+
+### Correction 3 (recommandé) — `jira_looks_like_account_id` en une regex
+
+Les 24 `[0-9a-fA-F]` du `case` se remplacent par `[[ "$1" =~ ^[0-9a-fA-F]{24}$ ]]`, qui marche en bash 3.2.57 (vérifié). Garder le cas `*:*` pour les comptes de service. −20 lignes, comportement identique, contraintes respectées (pas de `declare -A`/`${var^^}`).
+
+### Correction 4 (recommandé) — documenter le `trap` process-wide
+
+Le `trap … INT TERM` de `jira_curl_to_file` n'est pas local à la fonction : il écrase puis remet à `-` le handler du processus. Aucun appelant ne pose de trap aujourd'hui, mais une ligne de commentaire doit documenter cette limite pour éviter une régression future silencieuse.
+
 ## Ce que cette conception ne fait pas
 
 - **Ne touche pas `jira-get.sh`** : RD-23 le modifie, on reste indépendant de l'ordre de fusion.
