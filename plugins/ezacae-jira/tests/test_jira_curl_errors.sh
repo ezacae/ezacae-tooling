@@ -233,6 +233,23 @@ fi
 grep -q "accountId" "$TMP/resolveN.err" && ok "la liste d'homonymes rappelle qu'un accountId est accepté" \
   || nope "pas de rappel accountId sur homonymes : $(tr -d '\n' <"$TMP/resolveN.err")"
 
+# === Correction 3 (recommandé) : jira_looks_like_account_id, comportement figé ===
+# Verrouille le comportement avant/après le remplacement des 24 [0-9a-fA-F] du
+# case par une regex [[ =~ ]] : mêmes cas vrais/faux, y compris les bornes
+# (23/25 caractères) et le cas ':' (compte de service).
+check_account_id() {  # $1 = valeur, $2 = attendu (0=oui, 1=non), $3 = libellé
+  jira_looks_like_account_id "$1"
+  local rc=$?
+  [ "$rc" -eq "$2" ] && ok "jira_looks_like_account_id : $3" \
+    || nope "jira_looks_like_account_id : $3 (rc=$rc, attendu $2)"
+}
+check_account_id "6256cf820630bd0070761e65" 0 "24 hex (mesuré) → accountId"
+check_account_id "6256cf820630bd0070761e6" 1 "23 hex → pas un accountId"
+check_account_id "6256cf820630bd0070761e655" 1 "25 hex → pas un accountId"
+check_account_id "GGGGcf820630bd0070761e65" 1 "caractères non-hex → pas un accountId"
+check_account_id "service:xyz" 0 "contient ':' (compte de service) → accountId"
+check_account_id "Alexandre Husset" 1 "nom d'affichage → pas un accountId"
+
 # === Fixtures d'or : chemins de succès inchangés, octet pour octet =============
 # La sortie d'une lecture réussie ne doit pas bouger d'un octet avec la
 # réécriture de jira_curl (plus de --fail). Référence figée et commitée, jamais

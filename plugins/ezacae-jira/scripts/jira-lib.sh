@@ -234,11 +234,7 @@ jira_looks_like_account_id() {
   case "$1" in
     *:*) return 0 ;;
   esac
-  case "$1" in
-    [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])
-      return 0 ;;
-  esac
-  return 1
+  [[ "$1" =~ ^[0-9a-fA-F]{24}$ ]]
 }
 
 # $1 = ISSUE-KEY, $2 = nom d'affichage → "accountId<TAB>displayName" sur stdout
