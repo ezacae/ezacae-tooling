@@ -39,12 +39,24 @@ if ! REASON=$(jira_pipeline_guard "$CUR" "$TARGET"); then
   exit 3
 fi
 
-TRID=$(jira_transition_id_for_status "$ISSUE" "$TARGET")
+# Un seul appel aux transitions (avec les champs d'écran) : en tirer l'id ET
+# les champs requis, sur le même appel que jira_status ci-dessus + celui-ci.
+TRANSITIONS_JSON=$(jira_transitions "$ISSUE")
+TRID=$(jira_transition_id_for_target "$TRANSITIONS_JSON" "$TARGET")
 if [ -z "$TRID" ]; then
   echo "⛔ Aucune transition de '$CUR' vers '$TARGET' sur $ISSUE. Transitions disponibles :" >&2
-  jira_curl "$(jira_base)/rest/api/3/issue/${ISSUE}/transitions" \
-    | jq -r '.transitions[]? | "  • \(.name) → \(.to.name)"' >&2
+  printf '%s' "$TRANSITIONS_JSON" | jq -r '.transitions[]? | "  • \(.name) → \(.to.name)"' >&2
   exit 4
+fi
+
+# Pré-vol : seul le champ mesuré fatal (worklog) refuse avant envoi. Tout autre
+# champ requis (resolution, custom…) est laissé au serveur : les écrans Jira
+# portent souvent une valeur par défaut, et un refus côté client fermerait des
+# transitions que le serveur accepte (cf. conception RD-29, cas de l'annulation).
+REQUIRED_FIELDS=$(jira_required_fields_for_transition "$TRANSITIONS_JSON" "$TRID")
+if printf '%s\n' "$REQUIRED_FIELDS" | grep -qxF worklog && [ -z "$WORKLOG" ]; then
+  echo "⛔ La transition '$CUR' → '$TARGET' exige un temps consacré. Ajoute --worklog <durée> (ex. 30m)." >&2
+  exit 5
 fi
 
 # Corps de la transition (+ worklog éventuel pour les transitions à écran).

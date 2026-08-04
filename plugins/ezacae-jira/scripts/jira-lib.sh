@@ -141,16 +141,30 @@ jira_status() {
     | jq -r '.fields.status.name // empty'
 }
 
-# $1 = ISSUE-KEY, $2 = STATUT-CIBLE → id de la transition y menant (insensible à
-# la casse, jamais sur le nom de transition). Vide si aucune ne mène à la cible.
-# La comparaison se fait ENTIÈREMENT dans jq (ascii_upcase des deux côtés) : un
-# `tr` côté shell mettrait les caractères accentués en majuscule selon la locale
-# (é→É) alors que `ascii_upcase` les laisse tels quels, d'où un faux négatif sur
-# les statuts accentués (ex. « Annulé »).
-jira_transition_id_for_status() {
-  jira_curl "$(jira_base)/rest/api/3/issue/$1/transitions" \
-    | jq -r --arg t "$2" \
-      '.transitions[]? | select((.to.name|ascii_upcase)==($t|ascii_upcase)) | .id' | head -n1
+# $1 = ISSUE-KEY → JSON complet de GET .../transitions?expand=transitions.fields
+# (id, nom, statut cible ET champs requis de l'écran de transition). Un seul
+# appel : jira-transition.sh en tire l'id de la transition cible ET ses champs
+# requis (indice --worklog), sur le même appel qu'avant (pas une requête de plus).
+jira_transitions() {
+  jira_curl "$(jira_base)/rest/api/3/issue/$1/transitions?expand=transitions.fields"
+}
+
+# $1 = JSON de jira_transitions, $2 = STATUT-CIBLE → id de la transition y menant
+# (insensible à la casse, jamais sur le nom de transition). Vide si aucune ne
+# mène à la cible. La comparaison se fait ENTIÈREMENT dans jq (ascii_upcase des
+# deux côtés) : un `tr` côté shell mettrait les caractères accentués en
+# majuscule selon la locale (é→É) alors que `ascii_upcase` les laisse tels
+# quels, d'où un faux négatif sur les statuts accentués (ex. « Annulé »).
+jira_transition_id_for_target() {
+  printf '%s' "$1" | jq -r --arg t "$2" \
+    '.transitions[]? | select((.to.name|ascii_upcase)==($t|ascii_upcase)) | .id' | head -n1
+}
+
+# $1 = JSON de jira_transitions, $2 = id de transition → liste des noms de
+# champs requis par l'écran de cette transition (un par ligne, vide si aucun).
+jira_required_fields_for_transition() {
+  printf '%s' "$1" | jq -r --arg id "$2" \
+    '.transitions[]? | select(.id==$id) | .fields // {} | to_entries[] | select(.value.required==true) | .key'
 }
 
 # --- Garde de statut du pipeline Mike ⇄ Sarah ---------------------------------
