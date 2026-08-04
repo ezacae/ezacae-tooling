@@ -42,29 +42,30 @@ HTML_401 = ("<html><body><h1>401 Unauthorized</h1><p>" + ("Proxy interne - accè
 # --- Pièces jointes ---------------------------------------------------------------
 # Deux homonymes (id distincts) + un nom contenant '..' (tentative de traversée de
 # chemin) : le helper doit réduire ce nom à son basename avant tout usage.
-ATTACH_ISSUE = {
-    "fields": {
-        "attachment": [
-            {"id": "1001", "filename": "conception.md", "content": "/attachment/content/1001"},
-            {"id": "1002", "filename": "conception.md", "content": "/attachment/content/1002"},
-            {"id": "1003", "filename": "../evil-hors-dest.txt", "content": "/attachment/content/1003"},
-        ]
+# Le vrai Jira renvoie une URL ABSOLUE dans `content` : construite dynamiquement
+# (build_attach_issue) à partir du Host de la requête, jamais figée en dur.
+def _attach(aid, filename, host):
+    return {"id": aid, "filename": filename, "content": "http://{}/attachment/content/{}".format(host, aid)}
+
+
+def build_attach_issue(host):
+    return {
+        "fields": {
+            "attachment": [
+                _attach("1001", "conception.md", host),
+                _attach("1002", "conception.md", host),
+                _attach("1003", "../evil-hors-dest.txt", host),
+            ]
+        }
     }
-}
-DLFAIL_ISSUE = {
-    "fields": {
-        "attachment": [
-            {"id": "404", "filename": "disparue.md", "content": "/attachment/content/404"},
-        ]
-    }
-}
-BINARY_ISSUE = {
-    "fields": {
-        "attachment": [
-            {"id": "2001", "filename": "binaire.dat", "content": "/attachment/content/2001"},
-        ]
-    }
-}
+
+
+def build_dlfail_issue(host):
+    return {"fields": {"attachment": [_attach("404", "disparue.md", host)]}}
+
+
+def build_binary_issue(host):
+    return {"fields": {"attachment": [_attach("2001", "binaire.dat", host)]}}
 ATTACH_CONTENT = {
     "1001": b"Contenu de conception.md (premiere piece jointe).",
     "1002": b"Contenu de conception.md (seconde piece jointe, differente).",
@@ -187,12 +188,13 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(HTML_401)
                 return
+            host = self.headers.get("Host", "")
             if key == "RD-ATTACH":
-                return self._json(200, ATTACH_ISSUE)
+                return self._json(200, build_attach_issue(host))
             if key == "RD-DLFAIL":
-                return self._json(200, DLFAIL_ISSUE)
+                return self._json(200, build_dlfail_issue(host))
             if key == "RD-BINARY":
-                return self._json(200, BINARY_ISSUE)
+                return self._json(200, build_binary_issue(host))
             if key in STATUS:
                 return self._json(200, {"fields": {"status": {"name": STATUS[key]}}})
             if key == "RD-OK":
