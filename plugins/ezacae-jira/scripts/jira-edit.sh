@@ -7,7 +7,8 @@
 #   --description "..."        description (texte → ADF)
 #   --description-file <f>     description depuis un fichier (texte → ADF)
 #   --label <l>                ajoute un label (option répétable)
-#   --assignee <accountId|->   (ré)assigne ; '-' pour désassigner
+#   --assignee <accountId|nom|-> (ré)assigne (accountId ou nom d'affichage,
+#                              résolu si une seule correspondance) ; '-' pour désassigner
 # Requiert : JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, jq
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/jira-lib.sh"
@@ -15,7 +16,7 @@ jira_load_env
 jira_require_creds
 command -v jq >/dev/null 2>&1 || { echo "⛔ jq requis (brew install jq)" >&2; exit 1; }
 
-[ "$#" -ge 1 ] || { echo "Usage: jira-edit.sh <ISSUE-KEY> [--summary ..] [--description ..|--description-file f] [--label l].. [--assignee id|-]" >&2; exit 2; }
+[ "$#" -ge 1 ] || { echo "Usage: jira-edit.sh <ISSUE-KEY> [--summary ..] [--description ..|--description-file f] [--label l].. [--assignee id|nom|-]" >&2; exit 2; }
 ISSUE="$1"; shift
 
 FIELDS='{}'; LABEL_OPS='[]'
@@ -36,10 +37,16 @@ while [ "$#" -gt 0 ]; do
     --label)
       LABEL_OPS=$(printf '%s' "$LABEL_OPS" | jq --arg l "${2:?--label requiert une valeur}" '. + [{add: $l}]'); shift 2 ;;
     --assignee)
-      if [ "${2:?--assignee requiert un accountId ou '-'}" = "-" ]; then
+      ARG="${2:?--assignee requiert un accountId, un nom d affichage, ou le caractere -}"
+      if [ "$ARG" = "-" ]; then
         set_field assignee 'null'
+      elif jira_looks_like_account_id "$ARG"; then
+        set_field assignee "$(jq -n --arg a "$ARG" '{accountId: $a}')"
       else
-        set_field assignee "$(jq -n --arg a "$2" '{accountId: $a}')"
+        RESOLVED=$(jira_resolve_assignee "$ISSUE" "$ARG") || exit 1
+        IFS=$'\t' read -r ACCOUNT_ID DISPLAY_NAME <<<"$RESOLVED"
+        echo "→ assigné à ${DISPLAY_NAME} (${ACCOUNT_ID})"
+        set_field assignee "$(jq -n --arg a "$ACCOUNT_ID" '{accountId: $a}')"
       fi
       shift 2 ;;
     *) echo "⛔ Option inconnue : $1" >&2; exit 2 ;;
