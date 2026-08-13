@@ -47,3 +47,46 @@ build-jira-watcher-image:
     - unset HTTP_PROXY
     - unset HTTPS_PROXY
     - bash -xe /build/build.sh
+
+# ---------------------------------------------------------------------------
+# Tests shell des plugins (bash + jq, 100% hors-ligne, aucun credential requis).
+#
+# Aucun job ne les lançait jusqu'ici : la garantie de non-régression de la
+# conversion ADF (RD-23) reposait sur un test que personne n'exécutait.
+#
+# Le job vit dans le stage intégré `.pre` pour NE PAS redéfinir la clé `stages`
+# du template commun inclus plus haut — même précaution que le job d'image.
+#
+# `versions.lock` est dans la liste `changes` (RD-22) : une MR ne touchant
+# que ce fichier doit déclencher le job, sinon un écart avec les plugin.json
+# du dépôt passerait sans contrôle. Le mode --check du contrôle de dérive de
+# version est lancé en fin de script, sur la racine du dépôt (déduite de
+# l'emplacement du script, pas de $CI_PROJECT_DIR).
+# ---------------------------------------------------------------------------
+test-plugins-shell:
+  stage: .pre
+  image: alpine:3.20
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: &plugin_shell_changes
+        - plugins/**/*
+        - versions.lock
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes: *plugin_shell_changes
+  before_script:
+    # git : requis par plugins/ezacae-dev/tests/test-references-orphelines.sh
+    # (invariant référentiel post-fusion john+morgan → developer), pas par les
+    # tests RD-22 — constaté en vérifiant ce job sous alpine:3.20 avant de
+    # l'introduire ici (il n'existait sur aucune branche fusionnée jusqu'ici).
+    - apk add --no-cache bash jq git
+  script:
+    - |
+      status=0
+      for t in plugins/*/tests/test[-_]*.sh; do
+        echo "=== $t"
+        bash "$t" || status=1
+      done
+      echo "=== plugins/ezacae-base/hooks/check-ezacae-versions.sh --check"
+      bash plugins/ezacae-base/hooks/check-ezacae-versions.sh --check || status=1
+      exit $status
