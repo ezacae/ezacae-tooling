@@ -1,0 +1,3 @@
+🤖 [Mike] Cadrage terminé — 100% des cas
+Structure : {"type":"doc","version":1} et "guillemets"
+Antislash \ et double \\ et tabulation	littérale

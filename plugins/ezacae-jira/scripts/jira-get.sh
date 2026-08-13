@@ -34,9 +34,9 @@ if [ "$RAW" = "1" ]; then
   exit 0
 fi
 
-# adf_text : aplatit récursivement les nœuds texte d'un document ADF en chaîne.
-JQ_SUMMARY='
-  def adf_text: [.. | objects | select(.type=="text") | .text] | join("");
+# Rendu ADF partagé (jira-lib.sh) : frontières de blocs visibles, aucune perte de
+# contenu. Défini une seule fois pour la description ET les commentaires (RD-23).
+JQ_SUMMARY="$JIRA_JQ_ADF_RENDER"'
   "🎫 \(.key)  [\(.fields.status.name // "?")]  \(.fields.issuetype.name // "")",
   "Résumé    : \(.fields.summary // "")",
   "Assigné   : \(.fields.assignee.displayName // "non assigné")",
@@ -44,15 +44,14 @@ JQ_SUMMARY='
   "Labels    : \((.fields.labels // []) | join(", "))",
   "",
   "--- Description ---",
-  (.fields.description | if . == null then "(vide)" else adf_text end)
+  (.fields.description | if . == null then "(vide)" else adf_render end)
 '
 printf '%s' "$DATA" | jq -r "$JQ_SUMMARY"
 
 if [ "$WITH_COMMENTS" = "1" ]; then
-  JQ_COMMENTS='
-    def adf_text: [.. | objects | select(.type=="text") | .text] | join("");
+  JQ_COMMENTS="$JIRA_JQ_ADF_RENDER"'
     "", "--- Commentaires (\(.fields.comment.total // 0)) ---",
-    (.fields.comment.comments[]? | "• [\(.author.displayName // "?")] \(.created[0:16])\n\(.body | adf_text)\n")
+    (.fields.comment.comments[]? | "• [\(.author.displayName // "?")] \(.created[0:16])\n\(.body | adf_render)\n")
   '
   printf '%s' "$DATA" | jq -r "$JQ_COMMENTS"
 fi

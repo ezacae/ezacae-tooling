@@ -1,0 +1,4 @@
+Première ligne de texte.
+Deuxième ligne, juste après.
+
+Après une ligne vide.
