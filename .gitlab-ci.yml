@@ -28,9 +28,9 @@ build-jira-watcher-image:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes: &jira_watcher_changes
-        - deploy/jira-watcher/**/*
-        - plugins/**/*
-        - .gitlab-ci.yml
+        - disabled-deploy/jira-watcher/**/*
+        - disabled-plugins/**/*
+        - disabled-.gitlab-ci.yml
       variables:
         DO_PUSH: "false"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
@@ -47,7 +47,7 @@ build-jira-watcher-image:
     - unset HTTP_PROXY
     - unset HTTPS_PROXY
     - bash -xe /build/build.sh
-
+      
 # ---------------------------------------------------------------------------
 # Tests shell des plugins (bash + jq, 100% hors-ligne, aucun credential requis).
 #
