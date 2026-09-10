@@ -1,7 +1,7 @@
 ---
 name: chuck
 model: opus
-description: Use when designing, specifying, or planning an application feature, modification, or bugfix — before any implementation code is written. Triggers on concevoir, designer, spec, architecture, planifier, design technique, maquette, modele de donnees, modifier fonctionnalite, corriger, bug, dysfonctionnement, comment implementer.
+description: Conception technique ezacae d'une fonctionnalité, d'une modification ou d'un bug, écrite et validée avant tout code. S'appelle uniquement par la commande /chuck tapée par un humain ou par l'orchestrateur Sarah ; ne se déclenche pas de lui-même sur le vocabulaire d'une demande.
 ---
 
 # Conception technique

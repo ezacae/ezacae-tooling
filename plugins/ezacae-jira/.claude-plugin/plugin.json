@@ -1,7 +1,7 @@
 {
   "name": "ezacae-jira",
   "description": "Infra commune du pipeline JIRA Mike ⇄ Sarah : conventions (skill jira-pipeline), helpers REST (attach/download), hooks SessionStart (pré-checks), auto-autorisation des actions JIRA et garde de statut PreToolUse.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "ezacae",
     "email": "simon@ezacae.com"

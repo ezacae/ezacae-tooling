@@ -1,6 +1,6 @@
 ---
 name: developer
-description: Implémentation autonome guidée par un document de conception, dans n'importe quelle stack ezacae. Crée une branche, implémente en TDD phase par phase, vérifie avec preuves fraiches, push et crée une merge request. TOUTE écriture de code exige une conception (produite via /chuck) — pas de mode rapide sans conception. Se déclenche sur /developer, « implémenter la conception », « implémente ce design », « lance developer », « exécuter la conception », et aiguille vers /chuck toute demande d'implémentation (« coder », « corriger », « bugfix », « développer ») dépourvue de conception.
+description: Implémentation autonome ezacae guidée par un document de conception (chemin obligatoire) : branche, TDD phase par phase, preuves fraiches, push et merge request. S'appelle uniquement par la commande /developer tapée par un humain ou par l'orchestrateur Sarah ; ne se déclenche pas de lui-même.
 ---
 
 # Agent Developer — Implémentation autonome guidée par conception
