@@ -4,38 +4,36 @@ Marketplace interne ezacae de plugins Claude Code. C'est ici que vit l'outillage
 
 > **Contexte — chantier harnais IA ezacae.** Ce dépôt reflète l'organisation **actuelle** de l'outillage, pendant le cadrage du socle harnais. Les besoins sont validés (CDC v2 du 09/07) et le choix du socle est en cours (comparatif des 5 pistes, recommandation D′ : « les plugins sont un bon canal de livraison, pas un socle ») — voir le dépôt [`harness-doc`](https://gitlab.com/ezacae/harness-doc). Selon la piste retenue, ce dépôt pourra être déménagé, remplacé ou archivé. En attendant, il reste la référence en vigueur.
 
-## Démarrage rapide (nouveau dev)
+## Démarrage rapide (poste neuf)
 
-**1. Installer les plugins** (une fois par poste — détail plus bas) :
+**1. Les cinq lignes** (une fois par poste, dans Claude Code). Un poste neuf ne connaît pas l'adresse du catalogue : la première ligne la donne. Il faut un accès en lecture au dépôt GitLab (clé SSH).
 
 ```
-/plugin marketplace add <URL_GITLAB>/ezacae-claude-tooling
+/plugin marketplace add git@gitlab.com:ezacae/ezacae-claude-tooling.git
 /plugin install ezacae-base@ezacae-claude-tooling
 /plugin install ezacae-jira@ezacae-claude-tooling
 /plugin install ezacae-doc@ezacae-claude-tooling
 /plugin install ezacae-dev@ezacae-claude-tooling
 ```
 
-**2. Préparer le projet** : dans le repo où tu travailles, copier `jira.env.example` en `.claude/jira.env`, le renseigner, vérifier qu'il est gitignoré (voir « Pré-requis côté projet client »).
+**2. Deux prérequis, dans le terminal.** Ils ne sont pas dans le catalogue ; le hook d'ouverture de session d'`ezacae-dev` signale s'ils manquent ou si leur version dérive (`superpowers.lock`, `pocock.lock`).
 
-**3. Développer une fonctionnalité ou corriger un bug — une seule commande à retenir : `/mike`.** Tout travail de dev part d'un ticket JIRA et passe par le pipeline, y compris une petite correction. Tu n'as pas à enchaîner les étapes ni à connaître les agents un par un : tu lances `/mike`, puis tu valides à chaque gate.
+```
+claude plugin install superpowers@claude-plugins-official
+npx skills add mattpocock/skills -g -a claude-code -s grill-me -s grilling -s handoff -s to-tickets -y
+```
 
-| Point de départ | Commande | Ce qui se passe |
-|---|---|---|
-| J'ai un ticket JIRA (statut `NOUVEAU`) | `/mike <KEY>` | Mike cadre le besoin, met à jour la doc, passe le ticket en `CONCEPTION` et enchaîne automatiquement sur le développement |
-| Je n'ai pas de ticket | `/mike "ajoute la fonctionnalité X"` | Mike crée le ticket dans le bon projet, puis déroule le pipeline |
+**3. Préparer le projet** : dans le dépôt où tu travailles, copier `jira.env.example` (livré par `ezacae-jira`) en `.claude/jira.env`, le renseigner, vérifier qu'il est gitignoré (voir « Pré-requis côté projet client »).
 
-> **Mike n'est pas réservé à la doc.** C'est le point d'entrée unique pour **tout** le dev ezacae. Il orchestre en interne le cycle complet, avec un **gate de validation entre chaque phase** — aucun code n'est écrit tant que la conception n'est pas validée par toi :
->
-> ```
-> conception (tu valides)  →  implémentation (branche + tests + MR)  →  revue de code  →  doc finale
-> ```
->
-> Le statut du ticket avance à chaque étape et les livrables sont attachés automatiquement.
+**4. Ce qu'on tape.** Un besoin se cadre avec `/scope` (livrée par le sprint 1 du harnais, ticket RD-44) : la commande crée l'épique Jira, pose ses questions une série à la fois, écrit une page de cadrage et une page de spécification fonctionnelle dans `docs/` du projet, pose la taille décidée par la personne, puis passe l'épique « à valider » et s'arrête. Le responsable produit lit les deux pages et change lui-même le statut dans Jira : l'assistant ne peut pas faire ce clic, nos scripts le lui refusent. Après le clic, `/to-tickets` découpe l'épique en stories reliées. Rien ne se déclenche seul : chaque assistant s'appelle par une commande tapée par un humain.
 
-**Règle ezacae non négociable** : rien n'est conçu tant que le besoin n'est pas validé, rien n'est livré tant que la revue n'est pas faite. Les gates sont matérialisés par des états système (statut JIRA, merge), pas par une consigne ignorable — c'est vrai pour tout dev, quelle que soit sa taille.
+**5. Vérifier un poste** (à faire à la main, écarts notés dans le ticket d'installation) :
 
-Les agents qui exécutent ce cycle (Sarah l'orchestrateur, puis les phases conception / implémentation / revue) sont détaillés dans « Plugins » ci-dessous. En usage normal tu n'as pas à les invoquer par leur nom : `/mike` s'en charge.
+1. `/plugin` montre les quatre paquets ezacae aux versions du tableau « Plugins » ci-dessous.
+2. À l'ouverture d'une session, aucune ligne d'avertissement `ezacae-dev` sur superpowers ni sur les compétences Pocock.
+3. `/scope` apparaît dans les compétences disponibles.
+4. Dans un projet configuré pour Jira, la ligne « Helpers JIRA » du hook d'ouverture est présente et `jira-get.sh <clé>` lit un ticket.
+5. `/scope` sur un besoin fictif aboutit à une épique « à valider » dans Jira.
 
 ## Plugins
 
@@ -68,19 +66,7 @@ Les agents qui exécutent ce cycle (Sarah l'orchestrateur, puis les phases conce
 
 ## Installation (poste développeur)
 
-```
-/plugin marketplace add <URL_GITLAB>/ezacae-claude-tooling
-/plugin install ezacae-base@ezacae-claude-tooling
-/plugin install ezacae-jira@ezacae-claude-tooling
-/plugin install ezacae-doc@ezacae-claude-tooling
-/plugin install ezacae-dev@ezacae-claude-tooling
-```
-
-**2 bis. Installer les compétences de Matt Pocock en référence** (une fois par poste, terminal) — jamais copiées dans ce dépôt, versions verrouillées par `plugins/ezacae-dev/pocock.lock` et contrôlées à chaque ouverture de session :
-
-```
-npx skills add mattpocock/skills -g -a claude-code -s grill-me -s grilling -s handoff -s to-tickets -y
-```
+La procédure est celle du « Démarrage rapide » ci-dessus : les cinq lignes, puis les deux prérequis du terminal.
 
 Pendant le développement, en local :
 
