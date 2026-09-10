@@ -44,7 +44,7 @@ stateDiagram-v2
     CADRAGE --> CONCEPTION : Mike cadre, attache la fiche, handoff Sarah
     CONCEPTION --> CV : chuck conçoit et présente
     CV --> CONCEPTION : refus → itération
-    CV --> COK : design validé (.md de conception attaché)
+    CV --> COK : l'humain valide lui-même dans Jira (porte, refusée à l'assistant)
     COK --> ENCOURS : Sarah lance developer
     ENCOURS --> EXAMINER : MR créée → revue de code
     EXAMINER --> ENCOURS : findings bloquants
@@ -82,7 +82,7 @@ Ces gardes ne reposent pas que sur la discipline des agents : deux **hooks Claud
 | `CADRAGE → CONCEPTION` | Mike | Après cadrage doc, avant de passer la main à Sarah |
 | `CONCEPTION → CONCEPTION VALIDATION` | Sarah (chuck) | Quand le design est présenté pour validation |
 | `CONCEPTION VALIDATION → CONCEPTION` | Sarah | Si l'utilisateur refuse le design (itération) |
-| `CONCEPTION VALIDATION → CONCEPTION OK` | Sarah | Design validé par l'utilisateur |
+| `CONCEPTION VALIDATION → CONCEPTION OK` | **Humain (responsable produit), dans Jira** | Porte de validation : refusée à l'assistant par `jira-transition.sh` et `jira-guard.sh` (RD-43) |
 | `CONCEPTION OK → EN COURS` | Sarah | Lancement de developer |
 | `EN COURS → EXAMINER` | Sarah | MR créée, début de la revue |
 | `EXAMINER → EN COURS` | Sarah | Findings bloquants à corriger |
@@ -121,8 +121,8 @@ sequenceDiagram
     S->>J: jira-download.sh — récupère la fiche de Mike
     S->>CH: conception (sur la base du ticket + fiche)
     CH->>J: transition → CONCEPTION VALIDATION
-    U-->>CH: validation du design
-    S->>J: jira-attach.sh — conception .md ; transition → CONCEPTION OK
+    S->>J: jira-attach.sh — conception .md
+    U->>J: valide : change lui-même le statut → CONCEPTION OK (porte humaine)
     S->>MO: implémentation (garde : statut == CONCEPTION OK)
     MO->>J: transition → EN COURS
     MO-->>S: MR créée
@@ -150,7 +150,7 @@ sequenceDiagram
 3. Mike **transitionne le ticket en `CADRAGE`** dès le début du cadrage, puis fait son travail habituel : lecture des commentaires du ticket, audit de complétude, routage Mike-PO / Mike-CTO, mise à jour de la doc produit/technique.
 4. Mike produit une **fiche de cadrage fonctionnel** (le « fichier de résultat »), l'**attache** au ticket, le **transitionne** en `CONCEPTION`, **commente** la passation, puis **invoque `/sarah <KEY>`**.
 5. **Sarah** vérifie le statut (`CONCEPTION`), **télécharge** la fiche de Mike, et la passe à **chuck**.
-6. chuck conçoit → `CONCEPTION VALIDATION` → l'utilisateur valide → Sarah **attache** le `.md` de conception et transitionne en `CONCEPTION OK`.
+6. chuck conçoit → `CONCEPTION VALIDATION` → Sarah **attache** le `.md` de conception → **l'utilisateur valide en changeant lui-même le statut en `CONCEPTION OK` dans Jira** (porte humaine, refusée aux scripts : RD-43).
 7. Sarah lance **developer** → `EN COURS` → MR → Sarah **lie la MR** et transitionne en `EXAMINER`.
 8. Sarah déclenche **pr-review-toolkit:code-reviewer** sur le diff → **poste le rapport** sur le ticket.
 9. Sarah transitionne en `RECETTE INTERNE` et **redéclenche Mike** (`/mike <KEY>`).

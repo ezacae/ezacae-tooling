@@ -1,7 +1,7 @@
 {
   "name": "ezacae-dev",
   "description": "Cycle de développement ezacae : orchestrateur Sarah (conception → implémentation → revue), skills chuck / developer / grill-me / handoff, agent developer. developer est l'unique exécuteur (autonome, sous HARD-GATE : toute écriture de code exige une conception via chuck) et porte les conventions de stack + la méthode (superpowers) récupérées à l'exécution. Aucun skill ni agent ne se déclenche de lui-même : seule une commande tapée par un humain les appelle. Mode pipeline JIRA : nécessite ezacae-jira ; skills dev : nécessite superpowers.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "ezacae",
     "email": "simon@ezacae.com"
