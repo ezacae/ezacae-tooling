@@ -24,7 +24,7 @@ Quand un argument ressemble à une clé de ticket (`PROJ-123`), Sarah s'exécute
 | Phase du cycle | Action JIRA |
 |----------------|-------------|
 | 3.2 — chuck présente le design (GATE) | `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION VALIDATION"` |
-| 3.2 — design **validé** par l'utilisateur | `<HELPERS>/jira-attach.sh <KEY> docs/conception/<nom>.md` (+ maquette éventuelle) ; `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION OK" --comment "design validé"` |
+| 3.2 — design présenté | `<HELPERS>/jira-attach.sh <KEY> docs/conception/<nom>.md` (+ maquette éventuelle), puis **s'arrêter** : la validation est une porte humaine. L'utilisateur lit la conception et passe lui-même le ticket en `CONCEPTION OK` dans Jira ; `jira-transition.sh` refuse cette transition à Sarah (RD-43). |
 | 3.2 — design **refusé** | `<HELPERS>/jira-transition.sh <KEY> "CONCEPTION"` (itérer dans chuck) |
 | 3.3 — lancement developer | **garde** : ne lancer que si statut == `CONCEPTION OK` ; puis `<HELPERS>/jira-transition.sh <KEY> "EN COURS"`. Passer la clé du ticket à developer via ses `INSTRUCTIONS` (préfixer branche/MR par `<KEY>`). |
 | 3.3 — MR créée | `<HELPERS>/jira-transition.sh <KEY> EXAMINER --comment "MR : <url>"` |

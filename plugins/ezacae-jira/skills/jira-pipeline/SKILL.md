@@ -85,7 +85,7 @@ Les IDs de transition sont **propres à l'instance** : ne jamais les coder en du
 **Voie recommandée — `jira-transition.sh`** (résolution + garde en un appel) :
 
 ```bash
-<HELPERS>/jira-transition.sh CRM-337 "CONCEPTION OK"
+<HELPERS>/jira-transition.sh CRM-337 "CONCEPTION VALIDATION" --worklog 30m
 <HELPERS>/jira-transition.sh CRM-337 EXAMINER --worklog 30m --comment "MR créée — revue"
 ```
 
@@ -151,13 +151,15 @@ Graphe des transitions légales appliqué :
 NOUVEAU              → CADRAGE
 CADRAGE              → CONCEPTION
 CONCEPTION           → CONCEPTION VALIDATION
-CONCEPTION VALIDATION → CONCEPTION  |  CONCEPTION OK
+CONCEPTION VALIDATION → CONCEPTION      (retour ; → CONCEPTION OK est la porte humaine, refusée)
 CONCEPTION OK        → EN COURS
 EN COURS             → EXAMINER
 EXAMINER             → EN COURS  |  RECETTE INTERNE
 ```
 
 Le hook **n'agit que** si le ticket est déjà dans un statut du pipeline **et** que les credentials JIRA sont présents ; sinon il laisse passer (les autres projets/workflows ne sont pas concernés). C'est un **filet de sécurité déterministe** : il complète — sans la remplacer — la discipline d'enchaînement décrite ici.
+
+**Porte de validation humaine (RD-43, spec brique 1 §3).** La transition vers `CONCEPTION OK` est **refusée à l'assistant**, quel que soit le statut courant et par les deux voies (helper et hook) : seul le responsable produit la fait, en changeant lui-même le statut dans Jira après avoir lu les documents. Le refus dit quoi faire (« validation humaine dans Jira ») et n'envoie rien à Jira. Liste des portes dans `JIRA_HUMAN_GATES` (`scripts/jira-lib.sh`), test : `tests/test_jira_gate.sh`. Après le clic humain, `CONCEPTION OK → EN COURS` reste une transition de l'assistant.
 
 Précisions (validées par dry-run sur CRM-337) :
 - Comparaison **insensible à la casse** (les noms de statuts réels varient : `Nouveau`, `CONCEPTION`, `Recette Interne`).
@@ -187,7 +189,8 @@ Les helpers vivent dans le plugin ezacae-jira ; leur **chemin absolu est inject�
 <HELPERS>/jira-comment.sh PROJ-123 -f /tmp/rapport-revue.md
 
 # Transitionner par nom de statut (garde intégrée), avec worklog/commentaire optionnels
-<HELPERS>/jira-transition.sh PROJ-123 "CONCEPTION OK" --comment "design validé"
+<HELPERS>/jira-transition.sh PROJ-123 "CONCEPTION VALIDATION" --worklog 30m --comment "conception à valider"
+# (→ "CONCEPTION OK" est refusé : porte humaine, le responsable produit clique dans Jira)
 
 # Éditer des champs
 <HELPERS>/jira-edit.sh PROJ-123 --summary "Nouveau titre" --label backend

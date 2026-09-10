@@ -11,6 +11,7 @@ Routes couvertes (cf. conception docs/conception/rd-29-remontee-erreurs-helpers-
   GET  /rest/api/3/issue/RD-OK                       -> 200, fixture d'or (lecture réussie)
   GET  /rest/api/3/issue/RD-WORKLOG?fields=status    -> 200, statut CONCEPTION
   GET  /rest/api/3/issue/RD-ANNULE?fields=status     -> 200, statut EN COURS
+  GET  /rest/api/3/issue/RD-PORTE?fields=status      -> 200, statut CONCEPTION VALIDATION (RD-43)
   GET  /rest/api/3/issue/RD-ATTACH?fields=attachment -> 200, 2 homonymes + 1 nom avec '..'
   GET  /rest/api/3/issue/RD-DLFAIL?fields=attachment -> 200, 1 PJ dont le contenu échoue (404)
   GET  /rest/api/3/issue/RD-BINARY?fields=attachment -> 200, 1 PJ binaire (octet nul)
@@ -98,9 +99,19 @@ TRANSITIONS = {
     ],
 }
 
+# RD-PORTE : ticket en CONCEPTION VALIDATION (RD-43). Deux transitions : la porte
+#              de validation (id 51, cible « Conception OK », casse mixte comme sur
+#              le vrai Jira) que l'assistant doit refuser, et le retour en
+#              CONCEPTION (id 52) qui doit rester possible.
+TRANSITIONS["RD-PORTE"] = [
+    {"id": "51", "name": "Valider la conception", "to": {"name": "Conception OK"}, "fields": {}},
+    {"id": "52", "name": "Reprendre la conception", "to": {"name": "CONCEPTION"}, "fields": {}},
+]
+
 STATUS = {
     "RD-WORKLOG": "CONCEPTION",
     "RD-ANNULE": "EN COURS",
+    "RD-PORTE": "CONCEPTION VALIDATION",
 }
 
 # --- Recherche d'utilisateur assignable --------------------------------------------
@@ -254,6 +265,11 @@ class Handler(BaseHTTPRequestHandler):
                         },
                     },
                 )
+
+            if trid in ("51", "52"):
+                # Le vrai Jira accepterait les deux : c'est la garde côté client
+                # qui doit refuser 51 — un POST reçu ici avec 51 est un échec de test.
+                return self._no_content()
 
             return self._json(400, {"errorMessages": ["Transition id '{}' is not valid for this issue.".format(trid)], "errors": {}})
 

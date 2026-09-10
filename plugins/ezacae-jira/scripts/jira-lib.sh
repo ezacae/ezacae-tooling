@@ -187,12 +187,24 @@ jira_is_pipeline_status() {
   esac
 }
 
+# Porte de validation humaine (RD-43, spec brique 1 §3) : les statuts cibles que
+# SEUL un humain pose, en cliquant lui-même dans Jira. L'assistant, dont les
+# scripts sont l'unique chemin vers les tickets, ne fait jamais cette transition,
+# quel que soit le statut courant (y compris hors pipeline : la cible seule
+# décide). Un statut par ligne, en majuscules ASCII.
+JIRA_HUMAN_GATES="CONCEPTION OK"
+
+# $1 = statut cible (majuscules) → 0 si c'est une porte humaine.
+jira_is_human_gate() {
+  printf '%s\n' "$JIRA_HUMAN_GATES" | grep -qxF "$1"
+}
+
 # Graphe des transitions légales du pipeline : "SOURCE>CIBLE".
+# CONCEPTION VALIDATION → CONCEPTION OK n'y figure plus : c'est la porte humaine.
 JIRA_LEGAL_TRANSITIONS="NOUVEAU>CADRAGE
 CADRAGE>CONCEPTION
 CONCEPTION>CONCEPTION VALIDATION
 CONCEPTION VALIDATION>CONCEPTION
-CONCEPTION VALIDATION>CONCEPTION OK
 CONCEPTION OK>EN COURS
 EN COURS>EXAMINER
 EXAMINER>EN COURS
@@ -200,6 +212,7 @@ EXAMINER>RECETTE INTERNE"
 
 # Décision de garde. $1 = statut courant, $2 = statut cible (noms bruts).
 # Émet un message explicatif sur stdout ; retourne 0 (autorisé) / 1 (refusé).
+# - cible = porte humaine (RD-43)     → refusé, toujours, avant toute autre règle
 # - statut courant hors pipeline      → autorisé (les autres workflows ignorés)
 # - cible = annulation (globale)      → autorisé
 # - transition dans le graphe légal   → autorisé
@@ -208,6 +221,11 @@ jira_pipeline_guard() {
   local cur_u tgt_u legal_from
   cur_u=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')
   tgt_u=$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')
+
+  if jira_is_human_gate "$tgt_u"; then
+    echo "Porte de validation : '$2' se pose par validation humaine dans Jira, jamais par l'assistant. Demande au responsable produit de lire les documents et de changer lui-même le statut du ticket ; ne contourne pas (ni MCP, ni curl)."
+    return 1
+  fi
 
   if ! jira_is_pipeline_status "$cur_u"; then
     echo "Hors pipeline (statut '$1') — transition autorisée par défaut."; return 0
