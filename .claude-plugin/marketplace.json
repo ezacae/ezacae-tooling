@@ -28,7 +28,7 @@
     },
     {
       "name": "ezacae-dev",
-      "description": "Cycle de dev : orchestrateur Sarah, skills chuck/developer/grill-me/handoff, agent developer (unique exécuteur autonome sous HARD-GATE : conception obligatoire). Rien ne se déclenche de lui-même : seule une commande tapée par un humain appelle ces assistants. Mode pipeline JIRA : nécessite ezacae-jira.",
+      "description": "Cycle de dev : orchestrateur Sarah, skills chuck/developer, agent developer, compétences Pocock (grill-me, handoff, to-tickets) installées en référence et verrouillées (unique exécuteur autonome sous HARD-GATE : conception obligatoire). Rien ne se déclenche de lui-même : seule une commande tapée par un humain appelle ces assistants. Mode pipeline JIRA : nécessite ezacae-jira.",
       "category": "productivity",
       "source": "./plugins/ezacae-dev"
     }

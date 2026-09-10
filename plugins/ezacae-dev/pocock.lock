@@ -1,0 +1,9 @@
+# Compétences de Matt Pocock installées en référence (RD-42, spec brique 1 §2).
+# source : mattpocock/skills (https://github.com/mattpocock/skills)
+# install : npx skills add mattpocock/skills -g -a claude-code -s grill-me -s grilling -s handoff -s to-tickets -y
+# format  : <nom> <skillFolderHash relevé dans ~/.agents/.skill-lock.json le 10/09/2026>
+# grilling n'est pas une quatrième pièce : grill-me n'est qu'un alias qui l'appelle.
+grill-me 3df14e2d3a89459bf300614be9247e3ce74798f8
+grilling f0732035b8b1b60ae39454e4191caef32fa91903
+handoff 2242e8f05424b8c2ae94194a90d97b88d16108ec
+to-tickets b32c94e5a51c24ee9c41fcb7fe9ea9fff9af6369

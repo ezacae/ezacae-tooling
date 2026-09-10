@@ -44,7 +44,7 @@ Les agents qui exécutent ce cycle (Sarah l'orchestrateur, puis les phases conce
 | `ezacae-base` | Instructions globales ezacae (`conventions.md`) injectées en contexte à chaque session via un hook SessionStart — source unique d'équipe, remplace le copier-coller dans chaque `~/.claude/CLAUDE.md` | `0.2.0` |
 | `ezacae-jira` | Infra commune du pipeline JIRA : skill `jira-pipeline`, helpers REST (`jira-attach`/`jira-download`), hooks `SessionStart` (pré-checks Git/JIRA + chemin des helpers), **auto-autorisation des actions JIRA** (aucune validation manuelle), garde de statut `PreToolUse` et **porte de validation humaine** (`CONCEPTION OK` refusé à l'assistant) | `0.3.0` |
 | `ezacae-doc` | Orchestrateur Mike (PO/CTO) + commandes vision / personas / processus, avec les subagents `doc-writer` et `stack-writer` | `0.3.2` |
-| `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `developer`, `grill-me`, `handoff` ; agent `developer` ; hooks SessionStart (racine du plugin pour les conventions de stack, contrôle de version de superpowers). Aucun assistant ne se déclenche de lui-même | `0.5.1` |
+| `ezacae-dev` | Orchestrateur Sarah (conception → implémentation → revue) ; skills `chuck`, `developer` ; agent `developer` ; compétences Pocock (`grill-me`, `grilling`, `handoff`, `to-tickets`) installées **en référence** sur le poste et verrouillées par `pocock.lock` ; hooks SessionStart (racine du plugin, contrôle de version de superpowers et des compétences Pocock). Aucun assistant ne se déclenche de lui-même | `0.6.0` |
 
 `ezacae-doc` et `ezacae-dev` dépendent de `ezacae-jira` **uniquement** pour le mode pipeline JIRA (`/mike <KEY>`, `/sarah <KEY>`). Hors pipeline, les commandes fonctionnent seules.
 
@@ -74,6 +74,12 @@ Les agents qui exécutent ce cycle (Sarah l'orchestrateur, puis les phases conce
 /plugin install ezacae-jira@ezacae-claude-tooling
 /plugin install ezacae-doc@ezacae-claude-tooling
 /plugin install ezacae-dev@ezacae-claude-tooling
+```
+
+**2 bis. Installer les compétences de Matt Pocock en référence** (une fois par poste, terminal) — jamais copiées dans ce dépôt, versions verrouillées par `plugins/ezacae-dev/pocock.lock` et contrôlées à chaque ouverture de session :
+
+```
+npx skills add mattpocock/skills -g -a claude-code -s grill-me -s grilling -s handoff -s to-tickets -y
 ```
 
 Pendant le développement, en local :
@@ -139,10 +145,11 @@ ezacae-claude-tooling/
     │   └── agents/*.md  (doc-writer, stack-writer)
     └── ezacae-dev/
         ├── .claude-plugin/plugin.json
-        ├── hooks/        (hooks.json + session-start-dev.sh + check-superpowers.sh)
+        ├── hooks/        (hooks.json + session-start-dev.sh + check-superpowers.sh + check-pocock.sh)
         ├── superpowers.lock
+        ├── pocock.lock   (compétences Pocock installées en référence, jamais copiées ici)
         ├── commands/     (sarah.md)
-        ├── skills/       (chuck, developer, grill-me, handoff)
+        ├── skills/       (chuck, developer)
         └── agents/       (developer)
 ```
 
