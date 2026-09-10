@@ -1,7 +1,7 @@
 ---
 name: developer
 model: sonnet
-description: Développeur autonome ezacae, unique exécuteur d'implémentation, guidé par un document de conception. Crée une branche, implémente en TDD phase par phase, vérifie avec preuves fraiches, push et crée une merge request. Récupère son process, ses conventions (skill developer + stacks) et sa méthode (superpowers) à l'exécution — plus de conventions recopiées dans le prompt.
+description: Exécuteur d'implémentation ezacae, dispatché uniquement par l'orchestrateur Sarah avec un document de conception. Ne pas sélectionner de soi-même. Récupère ses conventions (skill developer + stacks) et sa méthode (superpowers) à l'exécution.
 ---
 
 # Agent Developer — Implémentation autonome guidée par conception

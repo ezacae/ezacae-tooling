@@ -212,4 +212,3 @@ Les agents pilotent JIRA via des **helpers shell** (API REST v3) **auto-autoris�
 | `<projet>/.claude/jira.env` | _projet_ | Credentials JIRA (gitignoré, copié depuis `jira.env.example`). |
 | `commands/mike.md` | ezacae-doc | Orchestrateur documentaire (intègre les phases JIRA). |
 | `commands/sarah.md` | ezacae-dev | Orchestrateur de dev (intègre les phases JIRA). |
-| `commands/feature.md` | ezacae-dev | Redirige vers ce pipeline (déprécié). |

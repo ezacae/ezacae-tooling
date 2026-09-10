@@ -26,7 +26,6 @@
 #
 #   MIGRATION.md                                     commandes de nettoyage des copies héritées
 #   README.md                                        phrase qui explique le renommage aux lecteurs
-#   docs/superpowers/**                              plans et specs datés (RD-8, 22/06) — exécutés, clos
 #   docs/conception/fusion-john-morgan-developer.md   la conception de cette fusion
 #   docs/conception/rd-8-alleger-les-skills.md        conception d'un chantier clos
 #   docs/conception/corrections-revue-mr14.md         conception des corrections de revue de !14 (RD-27)
@@ -47,7 +46,6 @@ MOTIF='/john|/morgan|skills/john|skills/morgan|agents/john|agents/morgan|skill j
 autorise() {
   case "$1" in
     MIGRATION.md|README.md) return 0 ;;
-    docs/superpowers/*) return 0 ;;
     docs/conception/fusion-john-morgan-developer.md) return 0 ;;
     docs/conception/rd-8-alleger-les-skills.md) return 0 ;;
     docs/conception/corrections-revue-mr14.md) return 0 ;;

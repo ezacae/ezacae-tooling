@@ -5,10 +5,11 @@ Conventions de contribution et de release du marketplace de plugins.
 ## Bumper la version à chaque modification d'un plugin
 
 Dès qu'on modifie les fichiers d'un plugin (commandes, skills, agents, hooks, scripts,
-conventions), il faut **bumper sa version**, à deux endroits dans la **même MR** :
+conventions), il faut **bumper sa version**, à trois endroits dans la **même MR** :
 
 1. `plugins/<plugin>/.claude-plugin/plugin.json` → champ `version`
-2. Le tableau des plugins du [`README.md`](README.md) → colonne `Statut`
+2. `versions.lock` à la racine du dépôt (RD-22) — la CI et le hook de session comparent ce fichier aux `plugin.json` : `bash plugins/ezacae-base/hooks/check-ezacae-versions.sh --check`
+3. Le tableau des plugins du [`README.md`](README.md) → colonne `Statut`
 
 ### Pourquoi
 
@@ -28,4 +29,4 @@ plugins : le code modifié reste invisible, le cache de l'ancienne version conti
 ### À ne pas oublier
 
 - Inclure le bump dans la **même MR** que les modifs — ne pas le reporter à une MR de suivi.
-- Mettre à jour `plugin.json` **et** le README en même temps (les deux doivent rester cohérents).
+- Mettre à jour `plugin.json`, `versions.lock` **et** le README en même temps (les trois doivent rester cohérents).
