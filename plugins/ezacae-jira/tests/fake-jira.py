@@ -17,6 +17,8 @@ Routes couvertes (cf. conception docs/conception/rd-29-remontee-erreurs-helpers-
   GET  /rest/api/3/issue/RD-BINARY?fields=attachment -> 200, 1 PJ binaire (octet nul)
   GET  /rest/api/3/issue/<KEY>/transitions?expand=… -> 200, transitions (+ champs requis si expand)
   POST /rest/api/3/issue/<KEY>/transitions           -> 204 si succès, 400 sinon ; compte les POST
+  POST /rest/api/3/issue                             -> 201, clé RD-9001, RD-9002… ; corps mémorisé (RD-44)
+  GET  /created-issues                               -> liste des corps reçus sur POST /issue
   PUT  /rest/api/3/issue/<KEY>                       -> 204 (succès) ou 400 errors-only pour RD-400ERRORS
   GET  /rest/api/3/user/assignable/search?query=...  -> 0, 1 ou plusieurs correspondances
   GET  /attachment/content/<id>                      -> contenu (texte ou binaire), 404 si id inconnu
@@ -30,6 +32,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 POST_COUNT = {"n": 0}
 SEARCH_COUNT = {"n": 0}
+CREATED = []  # corps reçus sur POST /rest/api/3/issue, dans l'ordre
 
 # --- Corps d'erreur mesurés sur le vrai Jira (cf. conception, table de reproduction) ---
 ERR_404 = {
@@ -166,6 +169,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/search-count":
             return self._json(200, {"count": SEARCH_COUNT["n"]})
 
+        if path == "/created-issues":
+            return self._json(200, CREATED)
+
         if path.startswith("/attachment/content/"):
             aid = path.rsplit("/", 1)[-1]
             if aid == "404":
@@ -272,6 +278,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._no_content()
 
             return self._json(400, {"errorMessages": ["Transition id '{}' is not valid for this issue.".format(trid)], "errors": {}})
+
+        if path == "/rest/api/3/issue":
+            CREATED.append(body)
+            key = "RD-{}".format(9000 + len(CREATED))
+            return self._json(201, {"id": str(100000 + len(CREATED)), "key": key})
 
         return self._json(404, ERR_404)
 
