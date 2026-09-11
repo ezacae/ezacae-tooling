@@ -7,10 +7,14 @@
 # Bash, la garde DOIT vivre ici pour ne pas être contournée.
 #
 # Usage : jira-transition.sh <ISSUE-KEY> <STATUT-CIBLE> [--worklog DURÉE] [--comment TEXTE]
+#         jira-transition.sh <ISSUE-KEY> --list
 #   ex.  jira-transition.sh CRM-337 "CONCEPTION OK"
 #        jira-transition.sh CRM-337 EXAMINER --worklog 30m --comment "MR créée — revue"
 #   --worklog : temps consacré (certaines transitions à écran l'exigent, ex. 30m, 1h)
 #   --comment : commentaire de passation posté après la transition
+#   --list    : lecture seule — affiche les transitions que Jira offre depuis le
+#               statut courant (« nom → statut cible »), sans rien changer. Sert à
+#               vérifier qu'un type de ticket suit le circuit avant d'en créer un.
 # Requiert : JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN, jq
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/jira-lib.sh"
@@ -18,8 +22,15 @@ jira_load_env
 jira_require_creds
 command -v jq >/dev/null 2>&1 || { echo "⛔ jq requis (brew install jq)" >&2; exit 1; }
 
-[ "$#" -ge 2 ] || { echo "Usage: jira-transition.sh <ISSUE-KEY> <STATUT-CIBLE> [--worklog DURÉE] [--comment TEXTE]" >&2; exit 2; }
+[ "$#" -ge 2 ] || { echo "Usage: jira-transition.sh <ISSUE-KEY> <STATUT-CIBLE> [--worklog DURÉE] [--comment TEXTE] | <ISSUE-KEY> --list" >&2; exit 2; }
 ISSUE="$1"; TARGET="$2"; shift 2
+
+if [ "$TARGET" = "--list" ]; then
+  CUR=$(jira_status "$ISSUE")
+  echo "Transitions offertes par Jira depuis '${CUR:-?}' sur $ISSUE :"
+  jira_transitions "$ISSUE" | jq -r '.transitions[]? | "  • \(.name) → \(.to.name)"'
+  exit 0
+fi
 
 WORKLOG=""; COMMENT=""
 while [ "$#" -gt 0 ]; do

@@ -11,9 +11,9 @@ Les scripts Jira sont ceux de la ligne « Helpers JIRA » injectée au démarrag
 
 ## Étape 1 — L'épique
 
-Si l'argument contient une clé de ticket (`PROJ-123`), tu reprends cette épique existante : `<HELPERS>/jira-get.sh <clé> --comments`, et tu repars de ce qu'elle contient. Sinon tu la crées dans le projet Jira du dépôt courant : `<HELPERS>/jira-create.sh --project <clé projet> --type Epic --summary "<besoin en une ligne>" --description "<les deux phrases>"`.
+Si l'argument contient une clé de ticket (`PROJ-123`), tu reprends cette épique existante : `<HELPERS>/jira-get.sh <clé> --comments`, et tu repars de ce qu'elle contient.
 
-Puis tu vérifies que le type choisi suit le circuit de validation : `<HELPERS>/jira-transition.sh <clé> CADRAGE`. Si la transition est refusée parce qu'elle n'existe pas, le type n'a pas le circuit (constat du 11/09/2026 : le type Epic du projet RD ne l'a pas encore) : dis-le en une phrase, indique quel type l'a (`<HELPERS>/jira-projects.sh <clé projet>`), et arrête-toi. Ne crée jamais de ticket « de contournement » sous l'épique.
+Sinon, **avant de créer**, tu vérifies que le type Epic du projet suit le circuit de validation, sans rien changer : `<HELPERS>/jira-search.sh "project = <clé projet> AND issuetype = Epic AND status = Nouveau ORDER BY created DESC" --max 1` te donne une épique existante, puis `<HELPERS>/jira-transition.sh <cette clé> --list` affiche les statuts qu'elle peut atteindre. Si CADRAGE y figure, le type a le circuit : tu crées l'épique, `<HELPERS>/jira-create.sh --project <clé projet> --type Epic --summary "<besoin en une ligne>" --description "<les deux phrases>"`, puis `<HELPERS>/jira-transition.sh <clé> CADRAGE`. Si CADRAGE n'y figure pas, le type n'a pas le circuit (constat du 11/09/2026 : le type Epic du projet RD ne l'a pas encore) : **rien n'est créé** ; dis-le en une phrase, indique quel type l'a (`<HELPERS>/jira-projects.sh <clé projet>`), et arrête-toi. S'il n'existe aucune épique en Nouveau pour vérifier, crée l'épique et tente CADRAGE ; un refus vaut le même constat. Ne crée jamais de ticket « de contournement » sous l'épique.
 
 ## Étape 2 — Les questions
 

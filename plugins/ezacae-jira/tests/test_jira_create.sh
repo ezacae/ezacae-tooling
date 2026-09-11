@@ -36,6 +36,13 @@ export JIRA_API_TOKEN="jeton-secret-de-test"
 post_count()    { curl -s "$JIRA_BASE_URL/post-count" | jq -r '.count'; }
 created_issues(){ curl -s "$JIRA_BASE_URL/created-issues"; }
 
+# === 0. Vérifier le circuit d'un type AVANT de créer : lecture seule ===============
+before=$(post_count)
+"$SCRIPTS/jira-transition.sh" RD-WORKLOG --list >"$TMP/o" 2>"$TMP/e"; RC=$?
+[ "$RC" -eq 0 ] && ok "jira-transition.sh --list rend 0" || nope "--list échoue (rc=$RC) : $(tr -d '\n' <"$TMP/e")"
+grep -q "CONCEPTION VALIDATION" "$TMP/o" && ok "--list affiche les statuts atteignables" || nope "--list n'affiche pas la cible : $(cat "$TMP/o")"
+[ "$(post_count)" = "$before" ] && ok "--list n'envoie aucune transition" || nope "--list a envoyé une transition"
+
 # === 1. jira-create.sh crée l'épique ==============================================
 "$SCRIPTS/jira-create.sh" --project RD --type Epic --summary "Facturer des abonnements B2B" \
   --label harnais-test >"$TMP/o" 2>"$TMP/e"; RC=$?
