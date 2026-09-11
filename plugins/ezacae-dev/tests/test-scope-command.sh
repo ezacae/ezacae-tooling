@@ -38,6 +38,9 @@ n=$(wc -l < "$CMD" | tr -d ' ')
 # --- Les cinq étapes du sprint 1 (spec §2 : 1, 2, 3, 4, 6) ------------------------
 contient "étape 1 : créer ou reprendre l'épique" "épique existante|reprend"
 contient "étape 1 : création via jira-create.sh" "jira-create\.sh"
+contient "étape 2 : demander d'abord si un document du besoin existe" "document.*(spécification|cahier|notes)|(spécification|cahier|notes).*document"
+contient "étape 2 : lire ce document en entier avant la première question" "en entier"
+contient "étape 2 : ne poser que ce que le document laisse ouvert" "laisse ouvert"
 contient "étape 2 : questions par séries, via grilling" "grilling"
 contient "étape 2 : réponse recommandée" "recommand"
 contient "étape 3 : page de cadrage dans docs/conception" "docs/conception"

@@ -17,7 +17,9 @@ Puis tu vérifies que le type choisi suit le circuit de validation : `<HELPERS>/
 
 ## Étape 2 — Les questions
 
-Invoque la compétence `grilling` (tool Skill) sur le besoin. Elle pose les questions par séries numérotées, chacune avec une réponse recommandée ; la personne tranche, série après série, jusqu'à ce qu'il ne reste plus d'inconnue. Les faits (ce que fait déjà le projet, ce que dit le code, ce que dit `docs/`), tu vas les chercher toi-même avant de poser une question ; seules les décisions sont posées à la personne.
+Avant la première question, demande à la personne si elle a déjà de la matière à partager : une spécification du besoin, un cahier des charges, des notes, un échange client. Si oui, lis chaque document en entier avant de poser quoi que ce soit, et ne pose que ce qu'il laisse ouvert ; ce qu'il tranche, tu le reprends tel quel dans la page. Partir de zéro quand la matière existe est le défaut à éviter.
+
+Invoque ensuite la compétence `grilling` (tool Skill) sur le besoin. Elle pose les questions par séries numérotées, chacune avec une réponse recommandée ; la personne tranche, série après série, jusqu'à ce qu'il ne reste plus d'inconnue. Les faits (ce que fait déjà le projet, ce que dit le code, ce que dit `docs/`), tu vas les chercher toi-même avant de poser une question ; seules les décisions sont posées à la personne.
 
 ## Étape 3 — La page de cadrage
 
